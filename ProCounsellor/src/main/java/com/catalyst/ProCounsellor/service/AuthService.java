@@ -18,7 +18,7 @@ public class AuthService {
         Firestore dbFirestore = FirestoreClient.getFirestore();
         DocumentReference documentReference = dbFirestore.collection(COLLECTION_NAME).document(user.getUserId());
 
-        // Check if user already exists
+        // Check if user already exists in the table.
         if (documentReference.get().get().exists()) {
             return "User already exists with ID: " + user.getUserId();
         }
