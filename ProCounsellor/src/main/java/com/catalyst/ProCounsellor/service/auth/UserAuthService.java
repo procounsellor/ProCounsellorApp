@@ -1,4 +1,4 @@
-package com.catalyst.ProCounsellor.service;
+package com.catalyst.ProCounsellor.service.auth;
 
 
 import com.catalyst.ProCounsellor.exception.InvalidCredentialsException;
