@@ -1,15 +1,22 @@
 package com.catalyst.ProCounsellor.controller;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 
+import com.catalyst.ProCounsellor.exception.InvalidCredentialsException;
+import com.catalyst.ProCounsellor.exception.UserNotFoundException;
 import com.catalyst.ProCounsellor.model.Admin;
 import com.catalyst.ProCounsellor.model.Counsellor;
 import com.catalyst.ProCounsellor.model.User;
 import com.catalyst.ProCounsellor.service.AdminAuthService;
-import com.catalyst.ProCounsellor.service.AuthService;
+import com.catalyst.ProCounsellor.service.UserAuthService;
 import com.catalyst.ProCounsellor.service.CounsellorAuthService;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.ExecutionException;
 
 @RestController
@@ -17,7 +24,7 @@ import java.util.concurrent.ExecutionException;
 public class AuthController {
 
     @Autowired
-    private AuthService authService;
+    private UserAuthService authService;
     
     @Autowired
     private CounsellorAuthService counsellorAuthService;
@@ -26,35 +33,64 @@ public class AuthController {
     private AdminAuthService adminAuthService;
 
     @PostMapping("/userSignup")
-    public String userSignup(@RequestBody User user) throws ExecutionException, InterruptedException {
-        return authService.signup(user);
-        
+    public ResponseEntity<Map<String, Object>> userSignup(@RequestBody User user) throws ExecutionException, InterruptedException {
+        String message = authService.signup(user);
+        return buildResponse(message, HttpStatus.CREATED);
     }
 
     @PostMapping("/userSignin")
-    public String userSignin(@RequestBody User user) throws ExecutionException, InterruptedException {
-        return authService.signin(user);
+    public ResponseEntity<Map<String, Object>> userSignin(@RequestBody User user) throws ExecutionException, InterruptedException {
+        try {
+            String message = authService.signin(user);
+            return buildResponse(message, HttpStatus.OK);
+        } catch (UserNotFoundException e) {
+            return buildResponse(e.getMessage(), HttpStatus.NOT_FOUND);
+        } catch (InvalidCredentialsException e) {
+            return buildResponse(e.getMessage(), HttpStatus.UNAUTHORIZED);
+        }
     }
-    
+
+
     @PostMapping("/counsellorSignup")
-    public String counsellorSignup(@RequestBody Counsellor user) throws ExecutionException, InterruptedException {
-        return counsellorAuthService.signup(user);
+    public ResponseEntity<Map<String, Object>> counsellorSignup(@RequestBody Counsellor user) throws ExecutionException, InterruptedException {
+        String message = counsellorAuthService.signup(user);
+        return buildResponse(message, HttpStatus.CREATED);
     }
 
     @PostMapping("/counsellorSignin")
-    public String counsellorSignin(@RequestBody Counsellor user) throws ExecutionException, InterruptedException {
-        return counsellorAuthService.signin(user);
+    public ResponseEntity<Map<String, Object>> counsellorSignin(@RequestBody Counsellor user) throws ExecutionException, InterruptedException {
+        try {
+            String message = counsellorAuthService.signin(user);
+            return buildResponse(message, HttpStatus.OK);
+        } catch (UserNotFoundException e) {
+            return buildResponse(e.getMessage(), HttpStatus.NOT_FOUND);
+        } catch (InvalidCredentialsException e) {
+            return buildResponse(e.getMessage(), HttpStatus.UNAUTHORIZED);
+        }
     }
-    
+
     @PostMapping("/adminSignup")
-    public String adminSignup(@RequestBody Admin user) throws ExecutionException, InterruptedException {
-        return adminAuthService.signup(user);
+    public ResponseEntity<Map<String, Object>> adminSignup(@RequestBody Admin user) throws ExecutionException, InterruptedException {
+        String message = adminAuthService.signup(user);
+        return buildResponse(message, HttpStatus.CREATED);
     }
 
     @PostMapping("/adminSignin")
-    public String adminSignin(@RequestBody Admin user) throws ExecutionException, InterruptedException {
-        return adminAuthService.signin(user);
+    public ResponseEntity<Map<String, Object>> adminSignin(@RequestBody Admin user) throws ExecutionException, InterruptedException {
+        try {
+        	String message = adminAuthService.signin(user);
+            return buildResponse(message, HttpStatus.OK);
+        } catch (UserNotFoundException e) {
+            return buildResponse(e.getMessage(), HttpStatus.NOT_FOUND);
+        } catch (InvalidCredentialsException e) {
+            return buildResponse(e.getMessage(), HttpStatus.UNAUTHORIZED);
+        }
     }
-    
-}
 
+    private ResponseEntity<Map<String, Object>> buildResponse(String message, HttpStatus status) {
+        Map<String, Object> response = new HashMap<>();
+        response.put("message", message);
+        response.put("status", status.value());
+        return new ResponseEntity<>(response, status);
+    }
+}
