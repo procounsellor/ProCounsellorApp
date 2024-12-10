@@ -1,5 +1,7 @@
 package com.catalyst.ProCounsellor.service;
 
+import com.catalyst.ProCounsellor.exception.InvalidCredentialsException;
+import com.catalyst.ProCounsellor.exception.UserNotFoundException;
 import com.catalyst.ProCounsellor.model.Counsellor;
 import com.google.api.core.ApiFuture;
 import com.google.cloud.firestore.*;
@@ -29,20 +31,22 @@ public class CounsellorAuthService {
     }
 
     // Signin functionality
-    public String signin(Counsellor user) throws ExecutionException, InterruptedException {
+    public String signin(Counsellor counsellor) throws ExecutionException, InterruptedException {
         Firestore dbFirestore = FirestoreClient.getFirestore();
-        DocumentReference documentReference = dbFirestore.collection(COLLECTION_NAME).document(user.getUserName());
+        DocumentSnapshot documentSnapshot = dbFirestore.collection(COLLECTION_NAME)
+                                                        .document(counsellor.getUserName())
+                                                        .get()
+                                                        .get();
 
-        DocumentSnapshot documentSnapshot = documentReference.get().get();
         if (documentSnapshot.exists()) {
-            Counsellor existingUser = documentSnapshot.toObject(Counsellor.class);
-            if (existingUser.getUserName().equals(user.getUserName()) && existingUser.getPassword().equals(user.getPassword())) {
-                return "Signin successful for User ID: " + user.getUserName();
+            Counsellor existingCounsellor = documentSnapshot.toObject(Counsellor.class);
+            if (existingCounsellor.getPassword().equals(counsellor.getPassword())) {
+                return "Signin successful for User ID: " + counsellor.getUserName();
             } else {
-                return "Invalid credentials!";
+                throw new InvalidCredentialsException("Invalid credentials provided.");
             }
         } else {
-            return "User not found!";
+            throw new UserNotFoundException("Counsellor not found for User ID: " + counsellor.getUserName());
         }
     }
 }

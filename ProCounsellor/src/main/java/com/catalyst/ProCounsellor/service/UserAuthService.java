@@ -1,6 +1,8 @@
 package com.catalyst.ProCounsellor.service;
 
 
+import com.catalyst.ProCounsellor.exception.InvalidCredentialsException;
+import com.catalyst.ProCounsellor.exception.UserNotFoundException;
 import com.catalyst.ProCounsellor.model.User;
 import com.google.api.core.ApiFuture;
 import com.google.cloud.firestore.*;
@@ -11,7 +13,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.logging.Logger;
 
 @Service
-public class AuthService {
+public class UserAuthService {
 
     private static final String COLLECTION_NAME = "users";
 
@@ -34,18 +36,20 @@ public class AuthService {
     // Signin functionality
     public String signin(User user) throws ExecutionException, InterruptedException {
         Firestore dbFirestore = FirestoreClient.getFirestore();
-        DocumentReference documentReference = dbFirestore.collection(COLLECTION_NAME).document(user.getUserName());
+        DocumentSnapshot documentSnapshot = dbFirestore.collection(COLLECTION_NAME)
+                                                        .document(user.getUserName())
+                                                        .get()
+                                                        .get();
 
-        DocumentSnapshot documentSnapshot = documentReference.get().get();
         if (documentSnapshot.exists()) {
             User existingUser = documentSnapshot.toObject(User.class);
-            if (existingUser.getUserName().equals(user.getUserName()) && existingUser.getPassword().equals(user.getPassword())) {
+            if (existingUser.getPassword().equals(user.getPassword())) {
                 return "Signin successful for User ID: " + user.getUserName();
             } else {
-                return "Invalid credentials!";
+                throw new InvalidCredentialsException("Invalid credentials provided.");
             }
         } else {
-            return "User not found!";
+            throw new UserNotFoundException("User not found for User ID: " + user.getUserName());
         }
     }
 }
