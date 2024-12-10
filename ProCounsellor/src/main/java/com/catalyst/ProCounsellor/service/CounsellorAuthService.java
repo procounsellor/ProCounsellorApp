@@ -1,23 +1,20 @@
 package com.catalyst.ProCounsellor.service;
 
-
-import com.catalyst.ProCounsellor.model.User;
+import com.catalyst.ProCounsellor.model.Counsellor;
 import com.google.api.core.ApiFuture;
 import com.google.cloud.firestore.*;
 import com.google.firebase.cloud.FirestoreClient;
 import org.springframework.stereotype.Service;
 
 import java.util.concurrent.ExecutionException;
-import java.util.logging.Logger;
 
 @Service
-public class AuthService {
+public class CounsellorAuthService {
 
-    private static final String COLLECTION_NAME = "users";
+    private static final String COLLECTION_NAME = "counsellors";
 
     // Signup functionality
-    public String signup(User user) throws ExecutionException, InterruptedException {
-    	System.out.println(user.getFirstName());
+    public String signup(Counsellor user) throws ExecutionException, InterruptedException {
         Firestore dbFirestore = FirestoreClient.getFirestore();
         DocumentReference documentReference = dbFirestore.collection(COLLECTION_NAME).document(user.getUserName());
 
@@ -32,13 +29,13 @@ public class AuthService {
     }
 
     // Signin functionality
-    public String signin(User user) throws ExecutionException, InterruptedException {
+    public String signin(Counsellor user) throws ExecutionException, InterruptedException {
         Firestore dbFirestore = FirestoreClient.getFirestore();
         DocumentReference documentReference = dbFirestore.collection(COLLECTION_NAME).document(user.getUserName());
 
         DocumentSnapshot documentSnapshot = documentReference.get().get();
         if (documentSnapshot.exists()) {
-            User existingUser = documentSnapshot.toObject(User.class);
+            Counsellor existingUser = documentSnapshot.toObject(Counsellor.class);
             if (existingUser.getUserName().equals(user.getUserName()) && existingUser.getPassword().equals(user.getPassword())) {
                 return "Signin successful for User ID: " + user.getUserName();
             } else {
