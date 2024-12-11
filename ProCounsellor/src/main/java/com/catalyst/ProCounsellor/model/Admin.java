@@ -1,5 +1,7 @@
 package com.catalyst.ProCounsellor.model;
 
+import java.util.List;
+
 import lombok.Data;
 
 @Data
@@ -14,5 +16,8 @@ public class Admin {
     private String experience;
     //make enum
     private String role;
+    
+    
+    
 
 }

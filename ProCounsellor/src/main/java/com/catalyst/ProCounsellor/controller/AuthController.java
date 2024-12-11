@@ -11,9 +11,9 @@ import com.catalyst.ProCounsellor.exception.UserNotFoundException;
 import com.catalyst.ProCounsellor.model.Admin;
 import com.catalyst.ProCounsellor.model.Counsellor;
 import com.catalyst.ProCounsellor.model.User;
-import com.catalyst.ProCounsellor.service.AdminAuthService;
-import com.catalyst.ProCounsellor.service.UserAuthService;
-import com.catalyst.ProCounsellor.service.CounsellorAuthService;
+import com.catalyst.ProCounsellor.service.auth.AdminAuthService;
+import com.catalyst.ProCounsellor.service.auth.CounsellorAuthService;
+import com.catalyst.ProCounsellor.service.auth.UserAuthService;
 
 import java.util.HashMap;
 import java.util.Map;
