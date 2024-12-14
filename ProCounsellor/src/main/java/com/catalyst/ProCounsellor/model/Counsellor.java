@@ -18,20 +18,20 @@ public class Counsellor {
     private String experience;
     private String role;
     private Address address;
-    private Double ratePerMinute;
+    private Double ratePerMinuteCall;
+    private Double ratePerMinuteVideoCall;
+    private Double ratePerMinuteChat;
+    private String noOfClients;
     private List<User> clients;
     private String ratings;
-    private List<String> language;
+    private String noOfFollowers;
+    private List<User> usersFollowing;
+    private List<String> languagesKnow;
     private List<Review> reviews;
     private String minuteSpendOnChat;
     private String minuteSpendOnCall;
     private String minuteSpendOnVideoCall;
     //to be verified by admin;
     private boolean isVerified;
-    private String noOfClients;
-    
-    
-    
-    
-      
+    private String cityOfCounsellor;
 }
