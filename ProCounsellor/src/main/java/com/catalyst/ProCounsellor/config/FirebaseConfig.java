@@ -20,6 +20,7 @@ public class FirebaseConfig {
         FirebaseOptions options = FirebaseOptions.builder()
                 .setCredentials(GoogleCredentials.fromStream(serviceAccount))
                 .setDatabaseUrl("https://procounsellor-71824.firebaseio.com")
+                .setStorageBucket("procounsellor-71824.firebasestorage.app")
                 .build();
 
         if (FirebaseApp.getApps().isEmpty()) {
