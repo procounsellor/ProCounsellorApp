@@ -10,9 +10,9 @@ import com.catalyst.ProCounsellor.exception.UserNotFoundException;
 import com.catalyst.ProCounsellor.model.Admin;
 import com.catalyst.ProCounsellor.model.Counsellor;
 import com.catalyst.ProCounsellor.model.User;
-import com.catalyst.ProCounsellor.service.auth.AdminAuthService;
-import com.catalyst.ProCounsellor.service.auth.CounsellorAuthService;
-import com.catalyst.ProCounsellor.service.auth.UserAuthService;
+import com.catalyst.ProCounsellor.service.AdminService;
+import com.catalyst.ProCounsellor.service.CounsellorService;
+import com.catalyst.ProCounsellor.service.UserService;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -23,13 +23,13 @@ import java.util.concurrent.ExecutionException;
 public class AuthController {
 
     @Autowired
-    private UserAuthService authService;
+    private UserService authService;
     
     @Autowired
-    private CounsellorAuthService counsellorAuthService;
+    private CounsellorService counsellorAuthService;
     
     @Autowired
-    private AdminAuthService adminAuthService;
+    private AdminService adminAuthService;
 
     @PostMapping("/userSignup")
     public ResponseEntity<Map<String, Object>> userSignup(@RequestBody User user) throws ExecutionException, InterruptedException {
@@ -51,15 +51,15 @@ public class AuthController {
 
 
     @PostMapping("/counsellorSignup")
-    public ResponseEntity<Map<String, Object>> counsellorSignup(@RequestBody Counsellor user) throws ExecutionException, InterruptedException {
-        String message = counsellorAuthService.signup(user);
+    public ResponseEntity<Map<String, Object>> counsellorSignup(@RequestBody Counsellor counsellor) throws ExecutionException, InterruptedException {
+        String message = counsellorAuthService.signup(counsellor);
         return buildResponse(message, HttpStatus.CREATED);
     }
 
     @PostMapping("/counsellorSignin")
-    public ResponseEntity<Map<String, Object>> counsellorSignin(@RequestBody Counsellor user) throws ExecutionException, InterruptedException {
+    public ResponseEntity<Map<String, Object>> counsellorSignin(@RequestBody Counsellor counsellor) throws ExecutionException, InterruptedException {
         try {
-            String message = counsellorAuthService.signin(user);
+            String message = counsellorAuthService.signin(counsellor);
             return buildResponse(message, HttpStatus.OK);
         } catch (UserNotFoundException e) {
             return buildResponse(e.getMessage(), HttpStatus.NOT_FOUND);
@@ -69,15 +69,15 @@ public class AuthController {
     }
 
     @PostMapping("/adminSignup")
-    public ResponseEntity<Map<String, Object>> adminSignup(@RequestBody Admin user) throws ExecutionException, InterruptedException {
-        String message = adminAuthService.signup(user);
+    public ResponseEntity<Map<String, Object>> adminSignup(@RequestBody Admin admin) throws ExecutionException, InterruptedException {
+        String message = adminAuthService.signup(admin);
         return buildResponse(message, HttpStatus.CREATED);
     }
 
     @PostMapping("/adminSignin")
-    public ResponseEntity<Map<String, Object>> adminSignin(@RequestBody Admin user) throws ExecutionException, InterruptedException {
+    public ResponseEntity<Map<String, Object>> adminSignin(@RequestBody Admin admin) throws ExecutionException, InterruptedException {
         try {
-        	String message = adminAuthService.signin(user);
+        	String message = adminAuthService.signin(admin);
             return buildResponse(message, HttpStatus.OK);
         } catch (UserNotFoundException e) {
             return buildResponse(e.getMessage(), HttpStatus.NOT_FOUND);
