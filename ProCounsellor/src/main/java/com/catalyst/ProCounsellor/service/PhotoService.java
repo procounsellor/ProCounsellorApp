@@ -27,9 +27,12 @@ public class PhotoService {
 		    // Upload the photo
 		    BlobId blobId = BlobId.of(bucketName, fileName);
 		    BlobInfo blobInfo = BlobInfo.newBuilder(blobId).setContentType("image/" + fileType).build();
-		    storage.create(blobInfo, photoBytes);
+		    Blob blob = storage.create(blobInfo, photoBytes);
 
-		    // Return the public URL of the uploaded photo
-		    return "https://storage.googleapis.com/" + bucketName + "/" + fileName;
+		    blob.createAcl(Acl.of(Acl.User.ofAllUsers(), Acl.Role.READER));//Make URL publicly accessible.
+
+		    String photoUrl = "https://storage.googleapis.com/" + bucketName + "/" + fileName + "?alt=media";
+
+		    return photoUrl; 
 		}
 }
