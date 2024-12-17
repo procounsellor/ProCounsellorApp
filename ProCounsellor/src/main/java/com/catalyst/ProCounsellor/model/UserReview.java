@@ -6,9 +6,9 @@ import lombok.Data;
 
 @Data
 public class UserReview {
-	private String userName;
 	private String counsellorName;
+	private float rating;
 	private String review;
 	private List<String> replies;
-	private String likes;
+	private Integer likes;
 }

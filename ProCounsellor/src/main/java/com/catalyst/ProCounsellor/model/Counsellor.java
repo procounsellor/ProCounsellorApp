@@ -2,11 +2,15 @@ package com.catalyst.ProCounsellor.model;
 
 import java.util.List;
 
+import com.google.cloud.firestore.annotation.DocumentId;
+
 import lombok.Data;
 
 @Data
 public class Counsellor {
-    private String userName;      
+	@DocumentId
+    private String userName;
+	
     private String firstName;   
     private String lastName;   
     private String phoneNumber; 
@@ -22,12 +26,12 @@ public class Counsellor {
     private Double ratePerMinuteVideoCall;
     private Double ratePerMinuteChat;
     private String noOfClients;
-    private List<User> clients;
+    private List<String> clientIds;
+    private List<String> followerIds;
     private Double rating;
     private String noOfFollowers;
-    private List<User> usersFollowing;
     private List<String> languagesKnow;
-    private List<Review> reviews;
+    private List<CounsellorReview> reviews;
     private String minuteSpendOnChat;
     private String minuteSpendOnCall;
     private String minuteSpendOnVideoCall;
