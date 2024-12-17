@@ -5,9 +5,10 @@ import java.util.List;
 import lombok.Data;
 
 @Data
-public class Review {
-	private String userName;
+public class CounsellorReview {
+	private String username;
+	private float rating;
 	private String review;
 	private List<String> replies;
-	private String likes;
+	private Integer likes;
 }

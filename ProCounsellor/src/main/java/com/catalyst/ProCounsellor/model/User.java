@@ -2,20 +2,24 @@ package com.catalyst.ProCounsellor.model;
 
 import java.util.List;
 
+import com.google.cloud.firestore.annotation.DocumentId;
+
 import lombok.Data;
 
 @Data
 public class User {
-    private String userName;      
+	@DocumentId
+    private String userName;
+	
     private String firstName;   
     private String lastName;   
     private String phoneNumber; 
     private String email;   
     private String password;
     private String role; 
-    private String photo;// to be changed in the proper format
-    private List<Counsellor> subscribedCounsellors;
-    private List<Counsellor> followedCounsellors;// to be brainstormed
+    private String photo;
+    private List<String> subscribedCounsellorIds; 
+    private List<String> followedCounsellorsIds;
     private Double balance; 
     private Address address;
     private boolean isConverted;
@@ -24,8 +28,7 @@ public class User {
     private List<Degree> interestedDegree;
     private List<College> interestedColleges;
     private List<String> interestedLocationsForCollege;
-    private List<UserReview> userComment;
-    
+    private List<UserReview> userReview;
 }
 
        

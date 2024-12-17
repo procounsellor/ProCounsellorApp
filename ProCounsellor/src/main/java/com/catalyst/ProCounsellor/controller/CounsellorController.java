@@ -4,6 +4,8 @@ import java.io.IOException;
 import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -14,6 +16,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import com.catalyst.ProCounsellor.model.Counsellor;
 import com.catalyst.ProCounsellor.model.StateType;
+import com.catalyst.ProCounsellor.model.User;
 import com.catalyst.ProCounsellor.service.CounsellorService;
 import com.catalyst.ProCounsellor.service.PhotoService;
 
@@ -58,5 +61,34 @@ public class CounsellorController {
             return "Error uploading photo: " + e.getMessage();
         }
     }
-
+	
+	@GetMapping("/{counsellorId}/clients")
+	public ResponseEntity<?> getSubscribedClients(@PathVariable String counsellorId) {
+	    try {
+	        List<User> clients = counsellorService.getSubscribedClients(counsellorId);
+	        if (clients == null || clients.isEmpty()) {
+	            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+	                                 .body("No clients found for counsellor with ID: " + counsellorId);
+	        }
+	        return ResponseEntity.ok(clients);
+	    } catch (Exception e) {
+	        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+	                             .body("An error occurred while retrieving subscribed clients: " + e.getMessage());
+	    }
+	}
+	
+	@GetMapping("/{counsellorId}/followers")
+	public ResponseEntity<?> getFollowers(@PathVariable String counsellorId) {
+	    try {
+	        List<User> followers = counsellorService.getFollowers(counsellorId);
+	        if (followers == null || followers.isEmpty()) {
+	            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+	                                 .body("No followers found for counsellor with ID: " + counsellorId);
+	        }
+	        return ResponseEntity.ok(followers);
+	    } catch (Exception e) {
+	        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+	                             .body("An error occurred while retrieving followers: " + e.getMessage());
+	    }
+	}
 }

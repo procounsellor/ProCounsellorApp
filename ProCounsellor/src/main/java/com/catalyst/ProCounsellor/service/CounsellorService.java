@@ -4,9 +4,12 @@ import com.catalyst.ProCounsellor.exception.InvalidCredentialsException;
 import com.catalyst.ProCounsellor.exception.UserNotFoundException;
 import com.catalyst.ProCounsellor.model.Counsellor;
 import com.catalyst.ProCounsellor.model.StateType;
+import com.catalyst.ProCounsellor.model.User;
 import com.google.api.core.ApiFuture;
 import com.google.cloud.firestore.*;
 import com.google.firebase.cloud.FirestoreClient;
+
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -15,6 +18,9 @@ import java.util.concurrent.ExecutionException;
 
 @Service
 public class CounsellorService {
+	
+	@Autowired
+	private FirebaseService firebaseService;
 
     private static final String COUNSELLORS = "counsellors";
 
@@ -109,4 +115,43 @@ public class CounsellorService {
         Firestore firestore = FirestoreClient.getFirestore();
         firestore.collection(COUNSELLORS).document(userId).update("photoUrl", photoUrl);
     }
+    
+    public List<User> getSubscribedClients(String counsellorId) {
+        try {
+            Counsellor counsellor = firebaseService.getCounsellorById(counsellorId);
+            if (counsellor != null && counsellor.getClientIds() != null) {
+                List<User> subscribedClients = new ArrayList<>();
+                for (String userId : counsellor.getClientIds()) {
+                    User user = firebaseService.getUserById(userId);
+                    if (user != null) {
+                        subscribedClients.add(user);
+                    }
+                }
+                return subscribedClients; // Return the list of full User objects
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return null; // Return null if counsellor not found or error occurs
+    }
+
+	public List<User> getFollowers(String counsellorId) {
+		try {
+            Counsellor counsellor = firebaseService.getCounsellorById(counsellorId);
+            if (counsellor != null && counsellor.getFollowerIds() != null) {
+                List<User> followers = new ArrayList<>();
+                for (String userId : counsellor.getFollowerIds()) {
+                    User user = firebaseService.getUserById(userId);
+                    if (user != null) {
+                    	followers.add(user);
+                    }
+                }
+                return followers; // Return the list of full User objects
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return null; // Return null if counsellor not found or error occurs
+	}
+
 }
