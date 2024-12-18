@@ -103,12 +103,10 @@ public class CounsellorController {
 	}
 	
 	@GetMapping("/{counsellorId}/has-client/{userId}")
-	public ResponseEntity<String> hasClient(@PathVariable String counsellorId, @PathVariable String userId) {
+	public ResponseEntity<Boolean> hasClient(@PathVariable String counsellorId, @PathVariable String userId) {
 	    boolean hasClient = counsellorService.hasClient(counsellorId, userId);
-	    if (hasClient) {
-	        return ResponseEntity.ok("Counsellor has the user as a client.");
-	    }
-	    return ResponseEntity.ok("Counsellor does NOT have the user as a client.");
+	    return ResponseEntity.ok(hasClient);
+	    
 	}
 	
 	@GetMapping("/{counsellorId}/has-follower/{userId}")
