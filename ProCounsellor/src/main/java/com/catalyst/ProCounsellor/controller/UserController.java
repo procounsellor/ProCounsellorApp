@@ -94,12 +94,9 @@ public class UserController {
 	}
 	
 	@GetMapping("/{userId}/is-subscribed/{counsellorId}")
-	public ResponseEntity<String> isSubscribedToCounsellor(@PathVariable String userId, @PathVariable String counsellorId) {
+	public ResponseEntity<Boolean> isSubscribedToCounsellor(@PathVariable String userId, @PathVariable String counsellorId) {
 	    boolean isSubscribed = userService.isSubscribedToCounsellor(userId, counsellorId);
-	    if (isSubscribed) {
-	        return ResponseEntity.ok("User has subscribed to the counsellor.");
-	    }
-	    return ResponseEntity.ok("User has NOT subscribed to the counsellor.");
+	    return ResponseEntity.ok(isSubscribed);
 	}
 	
 	@GetMapping("/{userId}/has-followed/{counsellorId}")
