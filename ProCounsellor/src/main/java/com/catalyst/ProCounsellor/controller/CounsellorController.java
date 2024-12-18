@@ -2,6 +2,7 @@ package com.catalyst.ProCounsellor.controller;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.concurrent.ExecutionException;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -18,6 +19,7 @@ import com.catalyst.ProCounsellor.model.Counsellor;
 import com.catalyst.ProCounsellor.model.StateType;
 import com.catalyst.ProCounsellor.model.User;
 import com.catalyst.ProCounsellor.service.CounsellorService;
+import com.catalyst.ProCounsellor.service.FirebaseService;
 import com.catalyst.ProCounsellor.service.PhotoService;
 
 @RestController
@@ -29,6 +31,9 @@ public class CounsellorController {
 	
 	@Autowired
 	private PhotoService photoService;
+	
+	@Autowired
+	private FirebaseService firebaseService;
 	
 	@GetMapping("/all-counsellors")
     public List<Counsellor> getAllCounsellors() {
@@ -91,4 +96,29 @@ public class CounsellorController {
 	                             .body("An error occurred while retrieving followers: " + e.getMessage());
 	    }
 	}
+	
+	@GetMapping("/{counsellorId}")
+	public Counsellor getCounsellorById(@PathVariable String counsellorId) throws ExecutionException, InterruptedException {	
+		return firebaseService.getCounsellorById(counsellorId);
+	}
+	
+	@GetMapping("/{counsellorId}/has-client/{userId}")
+	public ResponseEntity<String> hasClient(@PathVariable String counsellorId, @PathVariable String userId) {
+	    boolean hasClient = counsellorService.hasClient(counsellorId, userId);
+	    if (hasClient) {
+	        return ResponseEntity.ok("Counsellor has the user as a client.");
+	    }
+	    return ResponseEntity.ok("Counsellor does NOT have the user as a client.");
+	}
+	
+	@GetMapping("/{counsellorId}/has-follower/{userId}")
+	public ResponseEntity<String> hasFollower(@PathVariable String counsellorId, @PathVariable String userId) {
+	    boolean hasFollower = counsellorService.hasFollower(counsellorId, userId);
+	    if (hasFollower) {
+	        return ResponseEntity.ok("Counsellor has the user as a follower.");
+	    }
+	    return ResponseEntity.ok("Counsellor does not have the user as a follower.");
+	}
+
+
 }
