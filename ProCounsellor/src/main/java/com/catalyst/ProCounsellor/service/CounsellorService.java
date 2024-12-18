@@ -153,5 +153,29 @@ public class CounsellorService {
         }
         return null; // Return null if counsellor not found or error occurs
 	}
+	
+	public boolean hasClient(String counsellorId, String userId) {
+	    try {
+	        Counsellor counsellor = firebaseService.getCounsellorById(counsellorId); // Retrieve the counsellor
+	        if (counsellor != null && counsellor.getClientIds() != null) {
+	            return counsellor.getClientIds().contains(userId); // Check if userId exists in client list
+	        }
+	    } catch (Exception e) {
+	        e.printStackTrace();
+	    }
+	    return false; // Return false if counsellor or user not found
+	}
+
+	public boolean hasFollower(String counsellorId, String userId) {
+		   try {
+		        Counsellor counsellor = firebaseService.getCounsellorById(counsellorId); // Retrieve the counsellor
+		        if (counsellor != null && counsellor.getFollowerIds() != null) {
+		            return counsellor.getFollowerIds().contains(userId); // Check if userId exists in follower list
+		        }
+		    } catch (Exception e) {
+		        e.printStackTrace();
+		    }
+		    return false; // Return false if counsellor or user not found
+	}
 
 }

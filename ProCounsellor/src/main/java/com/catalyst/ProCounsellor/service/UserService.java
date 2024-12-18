@@ -180,4 +180,29 @@ public class UserService {
             return false;
         }
 	}
+	
+	public boolean isSubscribedToCounsellor(String userId, String counsellorId) {
+	    try {
+	        User user = firebaseService.getUserById(userId); // Retrieve the user
+	        if (user != null && user.getSubscribedCounsellorIds() != null) {
+	            return user.getSubscribedCounsellorIds().contains(counsellorId); // Check if counsellorId exists in subscribed list
+	        }
+	    } catch (Exception e) {
+	        e.printStackTrace();
+	    }
+	    return false; // Return false if user or counsellor not found
+	}
+
+	public boolean hasFollowedCounsellor(String userId, String counsellorId) {
+		try {
+	        User user = firebaseService.getUserById(userId); // Retrieve the user
+	        if (user != null && user.getFollowedCounsellorsIds() != null) {
+	            return user.getFollowedCounsellorsIds().contains(counsellorId); // Check if counsellorId exists in followed list
+	        }
+	    } catch (Exception e) {
+	        e.printStackTrace();
+	    }
+	    return false; // Return false if user or counsellor not found
+	}
+
 }
