@@ -110,12 +110,12 @@ public class CounsellorController {
 	}
 	
 	@GetMapping("/{counsellorId}/has-follower/{userId}")
-	public ResponseEntity<String> hasFollower(@PathVariable String counsellorId, @PathVariable String userId) {
+	public ResponseEntity<Boolean> hasFollower(@PathVariable String counsellorId, @PathVariable String userId) {
 	    boolean hasFollower = counsellorService.hasFollower(counsellorId, userId);
 	    if (hasFollower) {
-	        return ResponseEntity.ok("Counsellor has the user as a follower.");
+	        return ResponseEntity.ok(hasFollower);
 	    }
-	    return ResponseEntity.ok("Counsellor does not have the user as a follower.");
+	    return ResponseEntity.ok(hasFollower);
 	}
 
 

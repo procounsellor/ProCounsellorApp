@@ -204,5 +204,68 @@ public class UserService {
 	    }
 	    return false; // Return false if user or counsellor not found
 	}
+	
+	public boolean unsubscribeCounsellor(String userId, String counsellorId) {
+	    try {
+	        // Fetch user and counsellor
+	        User user = firebaseService.getUserById(userId);
+	        Counsellor counsellor = firebaseService.getCounsellorById(counsellorId);
+
+	        if (user == null || counsellor == null) {
+	            return false; // Return false if user or counsellor doesn't exist
+	        }
+
+	        // Remove counsellor from user's subscribedCounsellorIds
+	        if (user.getSubscribedCounsellorIds() != null) {
+	            user.getSubscribedCounsellorIds().remove(counsellorId);
+	        }
+
+	        // Remove user from counsellor's clientIds
+	        if (counsellor.getClientIds() != null) {
+	            counsellor.getClientIds().remove(userId);
+	        }
+
+	        // Update both entities in Firebase
+	        firebaseService.updateUser(user);
+	        firebaseService.updateCounsellor(counsellor);
+
+	        return true;
+	    } catch (Exception e) {
+	        e.printStackTrace();
+	        return false;
+	    }
+	}
+	
+	public boolean unfollowCounsellor(String userId, String counsellorId) {
+	    try {
+	        // Fetch user and counsellor
+	        User user = firebaseService.getUserById(userId);
+	        Counsellor counsellor = firebaseService.getCounsellorById(counsellorId);
+
+	        if (user == null || counsellor == null) {
+	            return false; // Return false if user or counsellor doesn't exist
+	        }
+
+	        // Remove counsellor from user's followedCounsellorIds
+	        if (user.getFollowedCounsellorsIds() != null) {
+	            user.getFollowedCounsellorsIds().remove(counsellorId);
+	        }
+
+	        // Remove user from counsellor's clientIds
+	        if (counsellor.getFollowerIds() != null) {
+	            counsellor.getFollowerIds().remove(userId);
+	        }
+
+	        // Update both entities in Firebase
+	        firebaseService.updateUser(user);
+	        firebaseService.updateCounsellor(counsellor);
+
+	        return true;
+	    } catch (Exception e) {
+	        e.printStackTrace();
+	        return false;
+	    }
+	}
+
 
 }

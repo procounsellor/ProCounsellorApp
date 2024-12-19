@@ -6,6 +6,7 @@ import java.util.concurrent.ExecutionException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -35,12 +36,18 @@ public class UserController {
 	@PostMapping("/{userId}/subscribe/{counsellorId}")
 	public ResponseEntity<String> subscribeToCounsellor(@PathVariable String userId, @PathVariable String counsellorId) {
 	    try {
-	        boolean result = userService.subscribeToCounsellor(userId, counsellorId);
-	        if (result) {
-	            return ResponseEntity.ok("Successfully subscribed to the counsellor.");
-	        }
-	        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-	                             .body("Subscription failed. Either the user or counsellor does not exist.");
+	    	boolean hasAlreadySubscribed = userService.isSubscribedToCounsellor(userId, counsellorId);
+	    	if(!hasAlreadySubscribed) {
+		        boolean result = userService.subscribeToCounsellor(userId, counsellorId);
+		        if (result) {
+		            return ResponseEntity.ok("Successfully subscribed to the counsellor.");
+		        }
+		        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+		                             .body("Subscription failed. Either the user or counsellor does not exist.");
+	    	}
+	    	else {
+	    		return ResponseEntity.ok("Already subscribed to the counsellor.");
+	    	}
 	    } catch (Exception e) {
 	        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
 	                             .body("An error occurred while subscribing: " + e.getMessage());
@@ -66,12 +73,19 @@ public class UserController {
 	@PostMapping("/{userId}/follow/{counsellorId}")
 	public ResponseEntity<String> followCounsellor(@PathVariable String userId, @PathVariable String counsellorId) {
 	    try {
-	        boolean result = userService.followCounsellor(userId, counsellorId);
-	        if (result) {
-	            return ResponseEntity.ok("Successfully followed the counsellor.");
-	        }
-	        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-	                             .body("Cannot follow. Either the user or counsellor does not exist.");
+	    	boolean isAlreadyFollwing = userService.hasFollowedCounsellor(userId, counsellorId);
+	    	
+	    	if(!isAlreadyFollwing) {
+		        boolean result = userService.followCounsellor(userId, counsellorId);
+		        if (result) {
+		            return ResponseEntity.ok("Successfully followed the counsellor.");
+		        }
+		        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+		                             .body("Cannot follow. Either the user or counsellor does not exist.");
+	    	}
+	    	else {
+	    		return ResponseEntity.ok("Already following the counsellor.");
+	    	}
 	    } catch (Exception e) {
 	        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
 	                             .body("An error occurred while following: " + e.getMessage());
@@ -100,12 +114,70 @@ public class UserController {
 	}
 	
 	@GetMapping("/{userId}/has-followed/{counsellorId}")
-	public ResponseEntity<String> hasFollowedCounsellor(@PathVariable String userId, @PathVariable String counsellorId) {
+	public ResponseEntity<Boolean> hasFollowedCounsellor(@PathVariable String userId, @PathVariable String counsellorId) {
 	    boolean hasFollowed = userService.hasFollowedCounsellor(userId, counsellorId);
 	    if (hasFollowed) {
-	        return ResponseEntity.ok("User has followed the counsellor.");
+	        return ResponseEntity.ok(hasFollowed);
 	    }
-	    return ResponseEntity.ok("User has NOT followed the counsellor.");
+	    return ResponseEntity.ok(hasFollowed);
 	}
+	
+	@DeleteMapping("/{userId}/unsubscribe/{counsellorId}")
+	public ResponseEntity<String> unsubscribeCounsellor(
+	        @PathVariable String userId, 
+	        @PathVariable String counsellorId) {
+	    try {
+	        // Check if the user is subscribed to the counsellor
+	        boolean isSubscribed = userService.isSubscribedToCounsellor(userId, counsellorId);
+
+	        if (!isSubscribed) {
+	            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+	                    .body("User is not subscribed to this counsellor.");
+	        }
+
+	        // Proceed to unsubscribe
+	        boolean result = userService.unsubscribeCounsellor(userId, counsellorId);
+	        if (result) {
+	            return ResponseEntity.ok("Successfully unsubscribed from the counsellor.");
+	        } else {
+	            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+	                    .body("An error occurred while trying to unsubscribe.");
+	        }
+	    } catch (Exception e) {
+	        e.printStackTrace();
+	        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+	                .body("An unexpected error occurred.");
+	    }
+	}
+
+	
+	@DeleteMapping("/{userId}/unfollow/{counsellorId}")
+	public ResponseEntity<String> unfollowCounsellor(
+	        @PathVariable String userId, 
+	        @PathVariable String counsellorId) {
+	    try {
+	        // Check if the user has followed to the counsellor
+	        boolean hasFollowed = userService.hasFollowedCounsellor(userId, counsellorId);
+
+	        if (!hasFollowed) {
+	            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+	                    .body("User has not followed this counsellor.");
+	        }
+
+	        // Proceed to undollow
+	        boolean result = userService.unfollowCounsellor(userId, counsellorId);
+	        if (result) {
+	            return ResponseEntity.ok("Successfully unfollowed the counsellor.");
+	        } else {
+	            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+	                    .body("An error occurred while trying to unfollow.");
+	        }
+	    } catch (Exception e) {
+	        e.printStackTrace();
+	        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+	                .body("An unexpected error occurred.");
+	    }
+	}
+
 
 }
