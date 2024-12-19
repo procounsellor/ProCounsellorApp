@@ -170,7 +170,7 @@ public class CounsellorService {
 		   try {
 		        Counsellor counsellor = firebaseService.getCounsellorById(counsellorId); // Retrieve the counsellor
 		        if (counsellor != null && counsellor.getFollowerIds() != null) {
-		            return counsellor.getFollowerIds().contains(userId); // Check if userId exists in follower list
+		            return counsellor.getFollowerIds().contains(userId); // Check if userId exists in fs list
 		        }
 		    } catch (Exception e) {
 		        e.printStackTrace();
