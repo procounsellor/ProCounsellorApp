@@ -25,13 +25,13 @@ public class Counsellor {
     private Double ratePerMinuteCall;
     private Double ratePerMinuteVideoCall;
     private Double ratePerMinuteChat;
-    private String noOfClients;
+    private Integer noOfClients;
+    private Integer noOfFollowers;
     private List<String> clientIds;
     private List<String> followerIds;
     private Double rating;
-    private String noOfFollowers;
     private List<String> languagesKnow;
-    private List<CounsellorReview> reviews;
+    private List<UserReview> reviews;
     private String minuteSpendOnChat;
     private String minuteSpendOnCall;
     private String minuteSpendOnVideoCall;
