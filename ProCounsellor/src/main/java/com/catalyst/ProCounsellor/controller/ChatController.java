@@ -8,7 +8,10 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Collections;
+import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 
 @RestController
 @RequestMapping("/api/chats")
@@ -44,12 +47,18 @@ public class ChatController {
     }
 
     @GetMapping("/{chatId}/messages")
-    public ResponseEntity<?> getChatMessages(@PathVariable String chatId) {
-        try {
-            Iterable<Map<String, Object>> messages = chatService.getChatMessages(chatId);
-            return ResponseEntity.ok(messages);
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error fetching messages.");
-        }
+    public CompletableFuture<ResponseEntity<List<Map<String, Object>>>> getChatMessages(@PathVariable String chatId) {
+        // Call the service method and handle the result asynchronously
+        return chatService.getChatMessages(chatId)
+                .thenApply(messages -> ResponseEntity.ok(messages))
+                .exceptionally(ex -> ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null));  // Return an empty body on error
     }
+    @GetMapping("/exists")
+    public ResponseEntity<Boolean> checkChatExists(
+            @RequestParam String userId,
+            @RequestParam String counsellorId) throws ExecutionException, InterruptedException {
+        boolean exists = chatService.doesChatExist(userId, counsellorId);
+        return ResponseEntity.ok(exists);
+    }
+
 }
