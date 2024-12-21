@@ -1,6 +1,8 @@
 package com.catalyst.ProCounsellor.service;
 
 import com.catalyst.ProCounsellor.dto.MessageRequest;
+import com.catalyst.ProCounsellor.model.Counsellor;
+import com.catalyst.ProCounsellor.model.User;
 import com.google.api.core.ApiFuture;
 import com.google.cloud.firestore.*;
 import com.google.firebase.database.DataSnapshot;
@@ -27,6 +29,9 @@ public class ChatService {
 
     @Autowired
     private FirebaseDatabase firebaseDatabase; // This is for Realtime Database
+    
+    @Autowired
+    private FirebaseService firebaseService;
 
     public String startChat(String userId, String counsellorId) throws ExecutionException, InterruptedException {
         // Step 1: Validate userId exists in the users table (Firestore)
@@ -142,5 +147,39 @@ public class ChatService {
 
         // Check if any document matches the query
         return !query.get().getDocuments().isEmpty();
+    }
+    
+    public List<Counsellor> getCounsellorsForUser(String userId) throws ExecutionException, InterruptedException {
+        ApiFuture<QuerySnapshot> query = firestore.collection("chats")
+                .whereEqualTo("userId", userId)
+                .get();
+
+        QuerySnapshot querySnapshot = query.get();
+        List<Counsellor> counsellors = new ArrayList<>();
+        for (QueryDocumentSnapshot document : querySnapshot.getDocuments()) {
+            // Extract counsellorId from each chat document
+        	Counsellor counsellor = firebaseService.getCounsellorById(document.getString("counsellorId"));
+            if (counsellor != null) {
+            	counsellors.add(counsellor);
+            }
+        }
+        return counsellors;
+    }
+
+    public List<User> getUsersForCounsellor(String counsellorId) throws ExecutionException, InterruptedException {
+        ApiFuture<QuerySnapshot> query = firestore.collection("chats")
+                .whereEqualTo("counsellorId", counsellorId)
+                .get();
+
+        QuerySnapshot querySnapshot = query.get();
+        List<User> users = new ArrayList<>();
+        for (QueryDocumentSnapshot document : querySnapshot.getDocuments()) {
+            // Extract userId from each chat document
+            User user = firebaseService.getUserById(document.getString("userId"));
+            if (user != null) {
+                users.add(user);
+            }
+        }
+        return users;
     }
 }

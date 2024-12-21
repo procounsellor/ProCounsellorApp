@@ -1,6 +1,8 @@
 package com.catalyst.ProCounsellor.controller;
 
 import com.catalyst.ProCounsellor.dto.MessageRequest;
+import com.catalyst.ProCounsellor.model.Counsellor;
+import com.catalyst.ProCounsellor.model.User;
 import com.catalyst.ProCounsellor.service.ChatService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -60,5 +62,25 @@ public class ChatController {
         boolean exists = chatService.doesChatExist(userId, counsellorId);
         return ResponseEntity.ok(exists);
     }
+    
+    @GetMapping("/user/{userId}/counsellors")
+    public ResponseEntity<?> getCounsellorsForUser(@PathVariable String userId) {
+        try {
+            List<Counsellor> counsellors = chatService.getCounsellorsForUser(userId);
+            
+            return ResponseEntity.ok(counsellors);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error fetching counsellors.");
+        }
+    }
 
+    @GetMapping("/counsellor/{counsellorId}/users")
+    public ResponseEntity<?> getUsersForCounsellor(@PathVariable String counsellorId) {
+        try {
+            List<User> users = chatService.getUsersForCounsellor(counsellorId);
+            return ResponseEntity.ok(users);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error fetching users.");
+        }
+    }
 }
