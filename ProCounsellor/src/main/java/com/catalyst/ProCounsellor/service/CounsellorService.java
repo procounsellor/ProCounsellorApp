@@ -14,6 +14,7 @@ import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ExecutionException;
 
 @Service
@@ -23,6 +24,8 @@ public class CounsellorService {
 	private FirebaseService firebaseService;
 
     private static final String COUNSELLORS = "counsellors";
+    
+    Firestore firestore = FirestoreClient.getFirestore();
 
     // Signup functionality
     public String signup(Counsellor counsellor) throws ExecutionException, InterruptedException {
@@ -177,5 +180,20 @@ public class CounsellorService {
 		    }
 		    return false; // Return false if counsellor or user not found
 	}
+	
+	public Counsellor updateCounsellorFields(String counsellorId, Map<String, Object> updates) throws ExecutionException, InterruptedException {
+        DocumentReference docRef = firestore.collection(COUNSELLORS).document(counsellorId);
+
+        // Perform the update
+        ApiFuture<WriteResult> writeResult = docRef.update(updates);
+
+        // Fetch the updated Counsellor
+        DocumentSnapshot document = docRef.get().get();
+        if (document.exists()) {
+            return document.toObject(Counsellor.class);
+        } else {
+            throw new RuntimeException("Counsellor not found");
+        }
+    }
 
 }
