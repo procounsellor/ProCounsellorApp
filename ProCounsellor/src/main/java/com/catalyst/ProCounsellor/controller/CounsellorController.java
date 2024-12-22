@@ -2,14 +2,17 @@ package com.catalyst.ProCounsellor.controller;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ExecutionException;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -56,7 +59,7 @@ public class CounsellorController {
             String fileType = file.getContentType().split("/")[1];
 
             // Upload the photo and get the photo URL
-            String photoUrl = photoService.uploadPhoto(userId, file.getBytes(), fileType);
+            String photoUrl = photoService.uploadPhoto(userId, file.getBytes(), fileType, "counsellor");
 
             // Update the user's photo URL in Firestore
             counsellorService.updateUserPhotoUrl(userId, photoUrl);
@@ -117,6 +120,17 @@ public class CounsellorController {
 	    }
 	    return ResponseEntity.ok(hasFollower);
 	}
-
+	
+	@PatchMapping("/{counsellorId}")
+    public ResponseEntity<Counsellor> updateUserFields(
+            @PathVariable String counsellorId,
+            @RequestBody Map<String, Object> updates) {
+        try {
+            Counsellor updatedCounsellor = counsellorService.updateCounsellorFields(counsellorId, updates);
+            return ResponseEntity.ok(updatedCounsellor);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null);
+        }
+    }
 
 }

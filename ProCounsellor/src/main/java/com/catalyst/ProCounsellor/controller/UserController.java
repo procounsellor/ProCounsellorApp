@@ -1,6 +1,8 @@
 package com.catalyst.ProCounsellor.controller;
 
+import java.io.IOException;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ExecutionException;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -8,14 +10,19 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 
 import com.catalyst.ProCounsellor.model.Counsellor;
 import com.catalyst.ProCounsellor.model.User;
 import com.catalyst.ProCounsellor.service.FirebaseService;
+import com.catalyst.ProCounsellor.service.PhotoService;
 import com.catalyst.ProCounsellor.service.UserService;
 
 @RestController
@@ -27,6 +34,8 @@ public class UserController {
 	
 	@Autowired
 	private FirebaseService firebaseService;
+	@Autowired
+	private PhotoService photoService;
 	
 	@GetMapping("/{userId}")
 	public User getUserById(@PathVariable String userId) throws ExecutionException, InterruptedException {	
@@ -178,6 +187,35 @@ public class UserController {
 	                .body("An unexpected error occurred.");
 	    }
 	}
+	
+	@PostMapping("/{userId}/photo")
+    public String updateUserPhoto(@PathVariable String userId, @RequestParam("photo") MultipartFile file) {
+        try {
+            String fileType = file.getContentType().split("/")[1];
+
+            // Upload the photo and get the photo URL
+            String photoUrl = photoService.uploadPhoto(userId, file.getBytes(), fileType, "user");
+
+            // Update the user's photo URL in Firestore
+            userService.updateUserPhotoUrl(userId, photoUrl);
+
+            return "Photo updated successfully: " + photoUrl;
+        } catch (IOException e) {
+            return "Error uploading photo: " + e.getMessage();
+        }
+    }
+	
+	 @PatchMapping("/{userId}")
+	    public ResponseEntity<User> updateUserFields(
+	            @PathVariable String userId,
+	            @RequestBody Map<String, Object> updates) {
+	        try {
+	            User updatedUser = userService.updateUserFields(userId, updates);
+	            return ResponseEntity.ok(updatedUser);
+	        } catch (Exception e) {
+	            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null);
+	        }
+	    }
 
 
 }

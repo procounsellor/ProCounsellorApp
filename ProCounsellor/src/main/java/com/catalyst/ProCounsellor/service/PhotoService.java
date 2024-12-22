@@ -9,7 +9,7 @@ import java.io.IOException;
 
 @Service
 public class PhotoService {
-	 public String uploadPhoto(String userId, byte[] photoBytes, String fileType) throws IOException {
+	 public String uploadPhoto(String userId, byte[] photoBytes, String fileType, String role) throws IOException {
 		    // Load the service account key file
 		    FileInputStream serviceAccount = new FileInputStream("src/main/resources/procounsellor-71824-firebase-adminsdk-a73ra-0c3dfaf526.json");
 
@@ -20,9 +20,14 @@ public class PhotoService {
 		            .getService();
 
 		    String bucketName = "procounsellor-71824.firebasestorage.app";
-
+		    String fileName = null;
 		    // Generate a unique file name for the photo
-		    String fileName = "counsellors/" + userId + "/photo." + fileType;
+		    if(role.equals("user")) {
+		    	fileName = "users/" + userId + "/photo." + fileType;
+		    }
+		    else if(role.equals("counsellor")) {
+		    	fileName = "counsellors/" + userId + "/photo." + fileType;
+		    }
 
 		    // Upload the photo
 		    BlobId blobId = BlobId.of(bucketName, fileName);

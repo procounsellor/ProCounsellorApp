@@ -14,6 +14,7 @@ import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ExecutionException;
 import java.util.logging.Logger;
 
@@ -22,6 +23,8 @@ public class UserService {
 	
 	@Autowired
 	private FirebaseService firebaseService;
+	
+	Firestore firestore = FirestoreClient.getFirestore();
 	
     private static final String USERS = "users";
 
@@ -266,6 +269,26 @@ public class UserService {
 	        return false;
 	    }
 	}
+
+	public void updateUserPhotoUrl(String userId, String photoUrl) {
+		Firestore firestore = FirestoreClient.getFirestore();
+        firestore.collection(USERS).document(userId).update("photo", photoUrl);
+	}
+	
+	 public User updateUserFields(String userId, Map<String, Object> updates) throws ExecutionException, InterruptedException {
+	        DocumentReference docRef = firestore.collection(USERS).document(userId);
+
+	        // Perform the update
+	        ApiFuture<WriteResult> writeResult = docRef.update(updates);
+
+	        // Fetch the updated user
+	        DocumentSnapshot document = docRef.get().get();
+	        if (document.exists()) {
+	            return document.toObject(User.class);
+	        } else {
+	            throw new RuntimeException("User not found");
+	        }
+	    }
 
 
 }
