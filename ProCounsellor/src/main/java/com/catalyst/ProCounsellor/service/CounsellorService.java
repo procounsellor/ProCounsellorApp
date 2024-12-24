@@ -3,11 +3,18 @@ package com.catalyst.ProCounsellor.service;
 import com.catalyst.ProCounsellor.exception.InvalidCredentialsException;
 import com.catalyst.ProCounsellor.exception.UserNotFoundException;
 import com.catalyst.ProCounsellor.model.Counsellor;
+import com.catalyst.ProCounsellor.model.CounsellorState;
 import com.catalyst.ProCounsellor.model.StateType;
 import com.catalyst.ProCounsellor.model.User;
+import com.catalyst.ProCounsellor.model.UserState;
 import com.google.api.core.ApiFuture;
 import com.google.cloud.firestore.*;
 import com.google.firebase.cloud.FirestoreClient;
+import com.google.firebase.database.DataSnapshot;
+import com.google.firebase.database.DatabaseError;
+import com.google.firebase.database.DatabaseReference;
+import com.google.firebase.database.FirebaseDatabase;
+import com.google.firebase.database.ValueEventListener;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -15,6 +22,7 @@ import org.springframework.stereotype.Service;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 
 @Service
@@ -96,22 +104,50 @@ public class CounsellorService {
         return counsellors;
     }
     
-    public List<Counsellor> getCounsellorsByState(StateType state) {
-        Firestore firestore = FirestoreClient.getFirestore();
-        ApiFuture<QuerySnapshot> querySnapshot = firestore.collection(COUNSELLORS)
-                .whereEqualTo("state", state.name())
-                .get();
+    public List<Counsellor> getOnlineCounsellors() throws InterruptedException, ExecutionException {
+        List<Counsellor> onlineCounsellorsList = new ArrayList<>();
+        List<String> onlineCounsellorNames = new ArrayList<>();
 
-        List<Counsellor> counsellors = new ArrayList<>();
-        try {
-            for (QueryDocumentSnapshot doc : querySnapshot.get().getDocuments()) {
-            	Counsellor counsellor = doc.toObject(Counsellor.class);
-            	counsellors.add(counsellor);
+        // Initialize Firebase Realtime Database reference
+        DatabaseReference databaseReference = FirebaseDatabase.getInstance().getReference("counsellorStates");
+
+        // Create a CountDownLatch to block the thread until the data is fetched
+        CountDownLatch latch = new CountDownLatch(1);
+
+        // Fetch the data asynchronously
+        databaseReference.addListenerForSingleValueEvent(new ValueEventListener() {
+            @Override
+            public void onDataChange(DataSnapshot dataSnapshot) {
+                for (DataSnapshot childSnapshot : dataSnapshot.getChildren()) {
+                	Map<String, Object> counsellorData = (Map<String, Object>) childSnapshot.getValue();
+                    String state = (String) counsellorData.get("state"); 
+                    if ("online".equalsIgnoreCase(state)) {
+                        onlineCounsellorNames.add(childSnapshot.getKey());
+                    }
+                }
+                // Release the latch to allow the thread to continue
+                latch.countDown();
             }
-        } catch (InterruptedException | ExecutionException e) {
-            throw new RuntimeException("Error fetching counsellors by state", e);
+
+            @Override
+            public void onCancelled(DatabaseError databaseError) {
+                System.err.println("Error fetching online counsellors: " + databaseError.getMessage());
+                latch.countDown(); // Release the latch even if there was an error
+            }
+        });
+
+        // Block until the latch is released (data is fetched)
+        latch.await();
+
+        // Fetch the counsellor objects synchronously for each online counsellor
+        for (String counsellorName : onlineCounsellorNames) {
+            Counsellor counsellor = firebaseService.getCounsellorById(counsellorName);
+            if (counsellor != null) {
+                onlineCounsellorsList.add(counsellor);
+            }
         }
-        return counsellors;
+
+        return onlineCounsellorsList;
     }
     
     public void updateUserPhotoUrl(String userId, String photoUrl) {
@@ -195,5 +231,41 @@ public class CounsellorService {
             throw new RuntimeException("Counsellor not found");
         }
     }
+	
+	
+	/**
+	 * Update the user state in Firebase Realtime Database.
+	 *
+	 * @param userName the counsellorName of the user
+	 * @param state    the presence state to be updated
+	 * @return true if update is successful
+	 */
+	 public boolean updateCounsellorState(String counsellorName, String state) {
+	        try {
+	            DatabaseReference databaseReference = FirebaseDatabase.getInstance().getReference("counsellorStates");
+
+	            // Check if the user exists in Firestore
+	            ApiFuture<DocumentSnapshot> future = firestore.collection(COUNSELLORS).document(counsellorName).get();
+	            DocumentSnapshot document = future.get();
+
+	            if (!document.exists()) {
+	                System.err.println("Counsellor not found in Firestore: " + counsellorName);
+	                return false; // User does not exist, deny the update
+	            }
+
+	            // Proceed to update the Realtime Database
+	            CounsellorState counsellorState = new CounsellorState();
+	            counsellorState.setCounsellorName(counsellorName);
+	            counsellorState.setState(state);
+
+	            databaseReference.child(counsellorName).setValueAsync(counsellorState);
+	            return true;
+
+	        } catch (Exception e) {
+	            // Log error
+	            System.err.println("Error updating counsellor state: " + e.getMessage());
+	            return false;
+	        }
+	    }
 
 }
