@@ -5,9 +5,12 @@ import com.catalyst.ProCounsellor.exception.InvalidCredentialsException;
 import com.catalyst.ProCounsellor.exception.UserNotFoundException;
 import com.catalyst.ProCounsellor.model.Counsellor;
 import com.catalyst.ProCounsellor.model.User;
+import com.catalyst.ProCounsellor.model.UserState;
 import com.google.api.core.ApiFuture;
 import com.google.cloud.firestore.*;
 import com.google.firebase.cloud.FirestoreClient;
+import com.google.firebase.database.DatabaseReference;
+import com.google.firebase.database.FirebaseDatabase;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -27,6 +30,7 @@ public class UserService {
 	Firestore firestore = FirestoreClient.getFirestore();
 	
     private static final String USERS = "users";
+    
 
     // Signup functionality
     public String signup(User user) throws ExecutionException, InterruptedException {
@@ -290,5 +294,40 @@ public class UserService {
 	        }
 	    }
 
+	 
+	 /**
+	 * Update the user state in Firebase Realtime Database.
+	 *
+	 * @param userName the username of the user
+	 * @param state    the presence state to be updated
+	 * @return true if update is successful
+	 */
+	 public boolean updateUserState(String userName, String state) {
+	        try {
+	            DatabaseReference databaseReference = FirebaseDatabase.getInstance().getReference("userStates");
+
+	            // Check if the user exists in Firestore
+	            ApiFuture<DocumentSnapshot> future = firestore.collection(USERS).document(userName).get();
+	            DocumentSnapshot document = future.get();
+
+	            if (!document.exists()) {
+	                System.err.println("User not found in Firestore: " + userName);
+	                return false; // User does not exist, deny the update
+	            }
+
+	            // Proceed to update the Realtime Database
+	            UserState userState = new UserState();
+	            userState.setUserName(userName);
+	            userState.setState(state);
+
+	            databaseReference.child(userName).setValueAsync(userState);
+	            return true;
+
+	        } catch (Exception e) {
+	            // Log error
+	            System.err.println("Error updating user state: " + e.getMessage());
+	            return false;
+	        }
+	    }
 
 }

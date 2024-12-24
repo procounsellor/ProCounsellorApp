@@ -1,9 +1,8 @@
 package com.catalyst.ProCounsellor.model;
 
 public enum StateType {
-    ONLINE("Online"),
-    OFFLINE("Offline"),
-    TYPING("Typing");
+    ONLINE("online"),
+    OFFLINE("offline");
 
     private final String description;
 

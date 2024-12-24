@@ -216,6 +216,25 @@ public class UserController {
 	            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null);
 	        }
 	    }
+	 
+	 	 /**
+	     * Update user state API using PathVariable.
+	     *
+	     * @param userName the username of the user
+	     * @param state    the presence state to be updated
+	     * @return ResponseEntity indicating success or failure
+	     */
+	    @PostMapping("/{userName}/{state}")
+	    public ResponseEntity<String> updateUserState(
+	            @PathVariable String userName,
+	            @PathVariable String state) {
 
+	        boolean isUpdated = userService.updateUserState(userName, state);
+	        if (isUpdated) {
+	            return ResponseEntity.ok("User state updated successfully.");
+	        } else {
+	            return ResponseEntity.status(500).body("Failed to update user state.");
+	        }
+	    }
 
 }

@@ -49,8 +49,8 @@ public class CounsellorController {
 	}
 	 
 	@GetMapping("/counsellors-online")
-	public List<Counsellor> getCounsellorsWithOnlineState() {
-	     return counsellorService.getCounsellorsByState(StateType.ONLINE);
+	public List<Counsellor> getCounsellorsWithOnlineState() throws InterruptedException, ExecutionException {
+	     return counsellorService.getOnlineCounsellors();
 	}
 	
 	@PostMapping("/{userId}/photo")
@@ -130,6 +130,26 @@ public class CounsellorController {
             return ResponseEntity.ok(updatedCounsellor);
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null);
+        }
+    }
+	
+	/**
+     * Update user state API using PathVariable.
+     *
+     * @param userName the counsellorName of the user
+     * @param state    the presence state to be updated
+     * @return ResponseEntity indicating success or failure
+     */
+    @PostMapping("/{counsellorName}/{state}")
+    public ResponseEntity<String> updateCounsellorState(
+            @PathVariable String counsellorName,
+            @PathVariable String state) {
+
+        boolean isUpdated = counsellorService.updateCounsellorState(counsellorName, state);
+        if (isUpdated) {
+            return ResponseEntity.ok("Counsellor state updated successfully.");
+        } else {
+            return ResponseEntity.status(500).body("Failed to update Counsellor state.");
         }
     }
 
