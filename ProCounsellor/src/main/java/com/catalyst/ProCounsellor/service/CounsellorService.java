@@ -274,14 +274,21 @@ public class CounsellorService {
 	  * @param userName the counsellorName of the user
 	  * @return true if the counsellor's state is "online", false otherwise
 	  */
-	 public boolean isCounsellorOnline(String counsellorName) {
-		    final boolean[] isOnline = {false};  // Using an array to hold the result of the asynchronous call
+	 public boolean isCounsellorOnline(String counsellorName) throws InterruptedException {
+		    // Create a CountDownLatch initialized to 1 (indicating that we need to wait for 1 event)
+		    CountDownLatch latch = new CountDownLatch(1);
+
+		    // Variable to hold the result
+		    final boolean[] isOnline = {false};
+
+		    // Get the reference to the user's state in the Realtime Database
 		    DatabaseReference databaseReference = FirebaseDatabase.getInstance().getReference("counsellorStates").child(counsellorName);
 
-		    // Asynchronous listener to fetch the counsellor's state
+		    // Add listener to fetch the user's state
 		    databaseReference.addListenerForSingleValueEvent(new ValueEventListener() {
 		        @Override
 		        public void onDataChange(DataSnapshot dataSnapshot) {
+		            // Check if the counsellor exists and retrieve their state
 		            if (dataSnapshot.exists()) {
 		                CounsellorState counsellorState = dataSnapshot.getValue(CounsellorState.class);
 		                if (counsellorState != null) {
@@ -289,19 +296,26 @@ public class CounsellorService {
 		                    isOnline[0] = "online".equalsIgnoreCase(counsellorState.getState());
 		                }
 		            } else {
-		                System.err.println("User state not found in Realtime Database for: " + counsellorName);
+		                System.err.println("Counsellor state not found in Realtime Database for: " + counsellorName);
 		            }
+		            
+		            // Decrease the latch count, indicating that the operation has completed
+		            latch.countDown();
 		        }
 
-				@Override
-				public void onCancelled(DatabaseError error) {
-					// Log error
-		            System.err.println("Error fetching counsellor state: " + error.getMessage());
-					
-				}
+		        @Override
+		        public void onCancelled(DatabaseError databaseError) {
+		            // Log error
+		            System.err.println("Error fetching user state: " + databaseError.getMessage());
+		            // Decrease the latch count in case of an error
+		            latch.countDown();
+		        }
 		    });
 
-		    // Since the operation is asynchronous, return the result after the callback
+		    // Wait for the latch to count down to 0 (i.e., for the callback to complete)
+		    latch.await();
+
+		    // Return the result after the callback completes
 		    return isOnline[0];
 		}
 

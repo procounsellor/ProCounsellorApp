@@ -21,6 +21,8 @@ import org.springframework.stereotype.Service;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.logging.Logger;
 
@@ -340,14 +342,21 @@ public class UserService {
 	  * @param userName the username of the user
 	  * @return true if the user's state is "online", false otherwise
 	  */
-	 public boolean isUserOnline(String userName) {
-		    final boolean[] isOnline = {false};  // Using an array to hold the result of the asynchronous call
+	 public boolean isUserOnline(String userName) throws InterruptedException {
+		    // Create a CountDownLatch initialized to 1 (indicating that we need to wait for 1 event)
+		    CountDownLatch latch = new CountDownLatch(1);
+
+		    // Variable to hold the result
+		    final boolean[] isOnline = {false};
+
+		    // Get the reference to the user's state in the Realtime Database
 		    DatabaseReference databaseReference = FirebaseDatabase.getInstance().getReference("userStates").child(userName);
 
-		    // Asynchronous listener to fetch the user's state
+		    // Add listener to fetch the user's state
 		    databaseReference.addListenerForSingleValueEvent(new ValueEventListener() {
 		        @Override
 		        public void onDataChange(DataSnapshot dataSnapshot) {
+		            // Check if the user exists and retrieve their state
 		            if (dataSnapshot.exists()) {
 		                UserState userState = dataSnapshot.getValue(UserState.class);
 		                if (userState != null) {
@@ -357,17 +366,24 @@ public class UserService {
 		            } else {
 		                System.err.println("User state not found in Realtime Database for: " + userName);
 		            }
+		            
+		            // Decrease the latch count, indicating that the operation has completed
+		            latch.countDown();
 		        }
 
-				@Override
-				public void onCancelled(DatabaseError error) {
-					// Log error
-		            System.err.println("Error fetching user state: " + error.getMessage());
-					
-				}
+		        @Override
+		        public void onCancelled(DatabaseError databaseError) {
+		            // Log error
+		            System.err.println("Error fetching user state: " + databaseError.getMessage());
+		            // Decrease the latch count in case of an error
+		            latch.countDown();
+		        }
 		    });
 
-		    // Since the operation is asynchronous, return the result after the callback
+		    // Wait for the latch to count down to 0 (i.e., for the callback to complete)
+		    latch.await();
+
+		    // Return the result after the callback completes
 		    return isOnline[0];
 		}
 }
