@@ -9,8 +9,11 @@ import com.catalyst.ProCounsellor.model.UserState;
 import com.google.api.core.ApiFuture;
 import com.google.cloud.firestore.*;
 import com.google.firebase.cloud.FirestoreClient;
+import com.google.firebase.database.DataSnapshot;
+import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
+import com.google.firebase.database.ValueEventListener;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -329,5 +332,42 @@ public class UserService {
 	            return false;
 	        }
 	    }
+	 
+	 
+	 /**
+	  * Check if the user is online by fetching their state from Firebase Realtime Database.
+	  *
+	  * @param userName the username of the user
+	  * @return true if the user's state is "online", false otherwise
+	  */
+	 public boolean isUserOnline(String userName) {
+		    final boolean[] isOnline = {false};  // Using an array to hold the result of the asynchronous call
+		    DatabaseReference databaseReference = FirebaseDatabase.getInstance().getReference("userStates").child(userName);
 
+		    // Asynchronous listener to fetch the user's state
+		    databaseReference.addListenerForSingleValueEvent(new ValueEventListener() {
+		        @Override
+		        public void onDataChange(DataSnapshot dataSnapshot) {
+		            if (dataSnapshot.exists()) {
+		                UserState userState = dataSnapshot.getValue(UserState.class);
+		                if (userState != null) {
+		                    // Check if the state is 'online'
+		                    isOnline[0] = "online".equalsIgnoreCase(userState.getState());
+		                }
+		            } else {
+		                System.err.println("User state not found in Realtime Database for: " + userName);
+		            }
+		        }
+
+				@Override
+				public void onCancelled(DatabaseError error) {
+					// Log error
+		            System.err.println("Error fetching user state: " + error.getMessage());
+					
+				}
+		    });
+
+		    // Since the operation is asynchronous, return the result after the callback
+		    return isOnline[0];
+		}
 }

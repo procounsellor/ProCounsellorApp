@@ -98,6 +98,7 @@ public class ChatService {
         Map<String, Object> messageData = new HashMap<>();
         messageData.put("senderId", messageRequest.getSenderId());
         messageData.put("text", messageRequest.getText());
+        messageData.put("isSeen", false);
         messageData.put("timestamp", System.currentTimeMillis());
 
         chatMessagesRef.child(messageId).setValueAsync(messageData);
@@ -182,4 +183,56 @@ public class ChatService {
         }
         return users;
     }
+    
+    public CompletableFuture<Boolean> isMessageSeen(String chatId, String messageId) {
+        CompletableFuture<Boolean> future = new CompletableFuture<>();
+
+        // Reference to the specific message in Firebase Realtime Database
+        DatabaseReference messageRef = firebaseDatabase.getReference("chats")
+                .child(chatId)
+                .child("messages")
+                .child(messageId);
+
+        // Fetch the message data asynchronously
+        messageRef.addListenerForSingleValueEvent(new ValueEventListener() {
+            @Override
+            public void onDataChange(DataSnapshot dataSnapshot) {
+                if (dataSnapshot.exists()) {
+                    Boolean isSeen = dataSnapshot.child("isSeen").getValue(Boolean.class);
+                    future.complete(isSeen != null && isSeen); // Return true if isSeen is true
+                } else {
+                    future.completeExceptionally(new IllegalArgumentException("Message not found."));
+                }
+            }
+
+            @Override
+            public void onCancelled(DatabaseError databaseError) {
+                future.completeExceptionally(new Exception("Error fetching message: " + databaseError.getMessage()));
+            }
+        });
+
+        return future;
+    }
+    
+    public CompletableFuture<Void> markMessageAsSeen(String chatId, String messageId) {
+        CompletableFuture<Void> future = new CompletableFuture<>();
+
+        // Reference to the specific message in Firebase Realtime Database
+        DatabaseReference messageRef = firebaseDatabase.getReference("chats")
+                .child(chatId)
+                .child("messages")
+                .child(messageId);
+
+        // Update the isSeen field to true
+        messageRef.child("isSeen").setValue(true, (error, ref) -> {
+            if (error != null) {
+                future.completeExceptionally(new Exception("Failed to update isSeen: " + error.getMessage()));
+            } else {
+                future.complete(null);
+            }
+        });
+
+        return future;
+    }
+
 }

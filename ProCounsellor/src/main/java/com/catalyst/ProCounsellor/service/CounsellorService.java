@@ -267,5 +267,42 @@ public class CounsellorService {
 	            return false;
 	        }
 	    }
+	 
+	 /**
+	  * Check if the counsellor is online by fetching their state from Firebase Realtime Database.
+	  *
+	  * @param userName the counsellorName of the user
+	  * @return true if the counsellor's state is "online", false otherwise
+	  */
+	 public boolean isCounsellorOnline(String counsellorName) {
+		    final boolean[] isOnline = {false};  // Using an array to hold the result of the asynchronous call
+		    DatabaseReference databaseReference = FirebaseDatabase.getInstance().getReference("counsellorStates").child(counsellorName);
+
+		    // Asynchronous listener to fetch the counsellor's state
+		    databaseReference.addListenerForSingleValueEvent(new ValueEventListener() {
+		        @Override
+		        public void onDataChange(DataSnapshot dataSnapshot) {
+		            if (dataSnapshot.exists()) {
+		                CounsellorState counsellorState = dataSnapshot.getValue(CounsellorState.class);
+		                if (counsellorState != null) {
+		                    // Check if the state is 'online'
+		                    isOnline[0] = "online".equalsIgnoreCase(counsellorState.getState());
+		                }
+		            } else {
+		                System.err.println("User state not found in Realtime Database for: " + counsellorName);
+		            }
+		        }
+
+				@Override
+				public void onCancelled(DatabaseError error) {
+					// Log error
+		            System.err.println("Error fetching counsellor state: " + error.getMessage());
+					
+				}
+		    });
+
+		    // Since the operation is asynchronous, return the result after the callback
+		    return isOnline[0];
+		}
 
 }

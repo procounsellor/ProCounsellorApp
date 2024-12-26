@@ -12,6 +12,7 @@ public class Message {
     private String chatId;
     private String senderId;
     private String text;
+    private boolean isSeen;
 
     @ServerTimestamp
     private Date timestamp;

@@ -55,6 +55,7 @@ public class ChatController {
                 .thenApply(messages -> ResponseEntity.ok(messages))
                 .exceptionally(ex -> ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null));  // Return an empty body on error
     }
+    
     @GetMapping("/exists")
     public ResponseEntity<Boolean> checkChatExists(
             @RequestParam String userId,
@@ -82,5 +83,33 @@ public class ChatController {
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error fetching users.");
         }
+    }
+    
+    @GetMapping("/{chatId}/messages/{messageId}/is-seen")
+    public CompletableFuture<ResponseEntity<Boolean>> isMessageSeen(
+            @PathVariable String chatId,
+            @PathVariable String messageId) {
+        return chatService.isMessageSeen(chatId, messageId)
+                .thenApply(isSeen -> ResponseEntity.ok(isSeen))
+                .exceptionally(ex -> {
+                    if (ex.getCause() instanceof IllegalArgumentException) {
+                        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(false);
+                    }
+                    return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(false);
+                });
+    }
+    
+    @PostMapping("/{chatId}/messages/{messageId}/mark-seen")
+    public CompletableFuture<ResponseEntity<String>> markMessageAsSeen(
+            @PathVariable String chatId,
+            @PathVariable String messageId) {
+        return chatService.markMessageAsSeen(chatId, messageId)
+                .thenApply(v -> ResponseEntity.ok("Message marked as seen."))
+                .exceptionally(ex -> {
+                    if (ex.getCause() instanceof IllegalArgumentException) {
+                        return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Message not found.");
+                    }
+                    return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error marking message as seen.");
+                });
     }
 }

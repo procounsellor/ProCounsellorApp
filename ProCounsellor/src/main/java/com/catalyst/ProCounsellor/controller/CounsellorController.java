@@ -152,5 +152,23 @@ public class CounsellorController {
             return ResponseEntity.status(500).body("Failed to update Counsellor state.");
         }
     }
+    
+    
+    /**
+     * Check if the user is online by their counsellorName.
+     *
+     * @param userName the counsellorName of the counsellor
+     * @return true if the counsellor is online, false otherwise
+     */
+    @GetMapping("/{counsellorName}/isOnline")
+    public boolean isOnline(@PathVariable String counsellorName) {
+        try {
+            return counsellorService.isCounsellorOnline(counsellorName);
+        } catch (Exception e) {
+            // Log the error and return false
+            System.err.println("Error checking counsellor online status: " + e.getMessage());
+            return false;
+        }
+    }
 
 }
