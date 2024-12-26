@@ -236,5 +236,22 @@ public class UserController {
 	            return ResponseEntity.status(500).body("Failed to update user state.");
 	        }
 	    }
+	    
+	    /**
+	     * Check if the user is online by their username.
+	     *
+	     * @param userName the username of the user
+	     * @return true if the user is online, false otherwise
+	     */
+	    @GetMapping("/{userName}/isOnline")
+	    public boolean isOnline(@PathVariable String userName) {
+	        try {
+	            return userService.isUserOnline(userName);
+	        } catch (Exception e) {
+	            // Log the error and return false
+	            System.err.println("Error checking user online status: " + e.getMessage());
+	            return false;
+	        }
+	    }
 
 }
