@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -38,6 +39,18 @@ public class ReviewController {
         } catch (Exception e) {
             // Return error response if any exception occurs (e.g., user or counsellor doesn't exist)
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Error: " + e.getMessage());
+        }
+    }
+    
+    @PutMapping("/{reviewId}")
+    public ResponseEntity<String> updateReview(
+            @PathVariable String reviewId, @RequestBody UserReview updatedReview) {
+        
+        try {
+            reviewService.updateReview(reviewId, updatedReview);
+            return ResponseEntity.ok("Review updated successfully!");
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Failed to update review: " + e.getMessage());
         }
     }
     
@@ -111,6 +124,20 @@ public class ReviewController {
         try {
             reviewService.addComment(reviewId, userName, comment);
             return ResponseEntity.ok("Comment added successfully!");
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
+        }
+    }
+    
+    // POST API to update an existing comment to a review
+    @PutMapping("/{reviewId}/comments/{commentId}")
+    public ResponseEntity<String> updateComment(
+            @PathVariable String reviewId, 
+            @PathVariable String commentId, 
+            @RequestBody UserReviewComments updatedComment) {
+        try {
+            reviewService.updateComment(reviewId, commentId, updatedComment);
+            return ResponseEntity.ok("Comment updated successfully!");
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
         }

@@ -31,6 +31,10 @@ public class ReviewService {
             firebaseService.postReview(userName, counsellorName, userReview);
     }
     
+    public void updateReview(String reviewId, UserReview updatedReview) throws Exception {
+    	firebaseService.updateReview(reviewId, updatedReview);
+	}
+    
     // Post a review from a user to a counsellor
     public void deleteReview(String reviewId) throws Exception {
             firebaseService.deleteReview(reviewId);
@@ -121,6 +125,37 @@ public class ReviewService {
         reviewRef.update("comments", comments);
     }
     
+    public void updateComment(String reviewId, String commentId, UserReviewComments updatedComment) throws Exception {
+        DocumentReference reviewRef = firestore.collection("reviews").document(reviewId);
+        DocumentSnapshot reviewSnapshot = reviewRef.get().get();
+
+        if (!reviewSnapshot.exists()) {
+            throw new Exception("Review with ID " + reviewId + " does not exist.");
+        }
+
+        List<UserReviewComments> comments = reviewSnapshot.toObject(UserReview.class).getComments();
+        if (comments == null) {
+            throw new Exception("No comments found for review with ID " + reviewId);
+        }
+
+        // Find the comment and update it
+        boolean commentUpdated = false;
+        for (UserReviewComments comment : comments) {
+            if (comment.getUserReviewCommentId().equals(commentId)) {
+                comment.setCommentText(updatedComment.getCommentText());
+                comment.setTimestamp(Timestamp.now());
+                commentUpdated = true;
+                break;
+            }
+        }
+
+        if (!commentUpdated) {
+            throw new Exception("Comment with ID " + commentId + " not found in review.");
+        }
+
+        reviewRef.update("comments", comments).get(); // Update the comments array
+    }
+    
     public void deleteComment(String reviewId, String commentId) throws ExecutionException, InterruptedException, Exception {
         DocumentReference reviewRef = firestore.collection("reviews").document(reviewId);
         DocumentSnapshot reviewSnapshot = reviewRef.get().get();
@@ -167,5 +202,7 @@ public class ReviewService {
         UserReview review = reviewSnapshot.toObject(UserReview.class);
         return review.getComments() != null ? review.getComments() : new ArrayList<>();
     }
+
+	
 }
 

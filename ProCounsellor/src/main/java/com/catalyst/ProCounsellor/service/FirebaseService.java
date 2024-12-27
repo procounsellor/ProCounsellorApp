@@ -1,7 +1,9 @@
 package com.catalyst.ProCounsellor.service;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 
@@ -161,6 +163,23 @@ public class FirebaseService {
 	        currentReviews.remove(reviewId);
 
 	        counsellorRef.update("reviewIds", currentReviews).get(); // Wait for the update to complete
+	    }
+	    
+	    public void updateReview(String reviewId, UserReview updatedReview) throws Exception {
+	        DocumentReference reviewRef = firestore.collection("reviews").document(reviewId);
+	        DocumentSnapshot reviewDoc = reviewRef.get().get();
+
+	        if (!reviewDoc.exists()) {
+	            throw new Exception("Review with ID " + reviewId + " does not exist.");
+	        }
+
+	        // Prepare a map of the fields to update (without affecting likes and comments)
+	        Map<String, Object> updateFields = new HashMap<>();
+	        updateFields.put("reviewText", updatedReview.getReviewText());  // Assuming updatedReview contains new review text
+	        updateFields.put("rating", updatedReview.getRating());          // Assuming updatedReview contains a rating
+
+	        // Update the review document without overwriting likes and comments
+	        reviewRef.update(updateFields).get(); 
 	    }
 	    
 	    public List<UserReview> getUserReviews(String userName) throws InterruptedException, ExecutionException {
