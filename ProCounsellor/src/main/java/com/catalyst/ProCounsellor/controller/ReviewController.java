@@ -6,6 +6,7 @@ import java.util.concurrent.ExecutionException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -14,6 +15,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.catalyst.ProCounsellor.model.UserReview;
+import com.catalyst.ProCounsellor.model.UserReviewComments;
 import com.catalyst.ProCounsellor.service.ReviewService;
 
 @RestController
@@ -39,6 +41,17 @@ public class ReviewController {
         }
     }
     
+    // DELETE API to delete a review
+    @DeleteMapping("/{reviewId}")
+    public ResponseEntity<String> deleteReview(@PathVariable String reviewId) {
+        try {
+            reviewService.deleteReview(reviewId);
+            return ResponseEntity.ok("Review deleted successfully!");
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
+        }
+    }
+    
     // Get all reviews given by a user
     @GetMapping("/user/{userName}")
     public ResponseEntity<List<UserReview>> getUserReviews(@PathVariable String userName) throws InterruptedException, ExecutionException {
@@ -55,7 +68,75 @@ public class ReviewController {
     @GetMapping("/{userName}/{counsellorName}")
     public ResponseEntity<UserReview> getSpecificReview(
             @PathVariable String userName,
-            @PathVariable String counsellorName) throws InterruptedException, ExecutionException {
+            @PathVariable String counsellorName) throws Exception {
         return ResponseEntity.ok(reviewService.getReview(userName, counsellorName));
     }
+    
+    @PostMapping("/{reviewId}/like")
+    public ResponseEntity<String> likeReview(@PathVariable String reviewId) {
+        try {
+            reviewService.likeReview(reviewId);
+            return ResponseEntity.ok("Review liked successfully!");
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
+        }
+    }
+    
+    @PostMapping("/{reviewId}/unlike")
+    public ResponseEntity<String> unlikeReview(@PathVariable String reviewId) {
+        try {
+            reviewService.unlikeReview(reviewId);
+            return ResponseEntity.ok("Review unliked successfully!");
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
+        }
+    }
+    
+    @GetMapping("/{reviewId}/likes")
+    public ResponseEntity<Integer> getReviewLikes(@PathVariable String reviewId) {
+        try {
+            Integer noOfLikes = reviewService.getReviewLikes(reviewId);
+            return ResponseEntity.ok(noOfLikes);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);
+        }
+    }
+    
+    // POST API to add a comment to a review
+    @PostMapping("/{reviewId}/comments/{userName}")
+    public ResponseEntity<String> addComment(
+            @PathVariable String reviewId,
+            @PathVariable String userName,
+            @RequestBody UserReviewComments comment) {
+        try {
+            reviewService.addComment(reviewId, userName, comment);
+            return ResponseEntity.ok("Comment added successfully!");
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
+        }
+    }
+    
+    // Delete a comment from a review
+    @DeleteMapping("/{reviewId}/comments/{commentId}")
+    public ResponseEntity<String> deleteComment(@PathVariable String reviewId, @PathVariable String commentId) {
+        try {
+            reviewService.deleteComment(reviewId, commentId);
+            return ResponseEntity.ok("Comment deleted successfully!");
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
+        }
+    }
+
+    // GET API to fetch all comments of a review
+    @GetMapping("/{reviewId}/comments")
+    public ResponseEntity<List<UserReviewComments>> getComments(@PathVariable String reviewId) {
+        try {
+            List<UserReviewComments> comments = reviewService.getComments(reviewId);
+            return ResponseEntity.ok(comments);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);
+        }
+    }
+    
+    
 }

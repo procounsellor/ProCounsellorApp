@@ -31,7 +31,7 @@ public class Counsellor {
     private List<String> followerIds;
     private Double rating;
     private List<String> languagesKnow;
-    private List<UserReview> reviews;
+    private List<String> reviewIds;
     private String minuteSpendOnChat;
     private String minuteSpendOnCall;
     private String minuteSpendOnVideoCall;
