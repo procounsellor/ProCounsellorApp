@@ -28,7 +28,7 @@ public class User {
     private List<Degree> interestedDegree;
     private List<College> interestedColleges;
     private List<String> interestedLocationsForCollege;
-    private List<UserReview> userReview;
+    private List<String> userReviewIds;
 }
 
        

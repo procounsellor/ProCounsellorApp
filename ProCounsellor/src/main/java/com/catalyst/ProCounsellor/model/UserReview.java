@@ -8,11 +8,13 @@ import lombok.Data;
 
 @Data
 public class UserReview {
+	private String reviewId;
     private String userName;
+    private String photoUrl;
     private String counsellorName; 
     private String reviewText;
-    private int rating;
+    private float rating;
     private Timestamp timestamp;
-    private Integer likes;
-    private List<String> replies;
+    private Integer noOfLikes;
+    private List<UserReviewComments> comments;
 }
