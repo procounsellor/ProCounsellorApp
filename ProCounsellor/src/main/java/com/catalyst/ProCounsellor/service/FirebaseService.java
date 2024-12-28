@@ -274,6 +274,56 @@ public class FirebaseService {
 	        return null;
 	    }
 	    
+	    public String getCounsellorFullNameFromUserName(String counsellorName) {
+	        try {
+	            DocumentSnapshot documentSnapshot = firestore.collection("counsellors")
+	                    .document(counsellorName)
+	                    .get()
+	                    .get();
+	            
+	            if (documentSnapshot.exists()) {
+	                String firstName = documentSnapshot.getString("firstName");
+	                String lastName = documentSnapshot.getString("lastName");
+	                
+	                if (firstName != null && lastName != null) {
+	                    return firstName + " " + lastName;
+	                } else {
+	                    return counsellorName;
+	                }
+	            } else {
+	                return "User not found";
+	            }
+	        } catch (Exception e) {
+	            e.printStackTrace();
+	            return "Error retrieving user details";
+	        }
+	    }
+	    
+	    public String getUserFullNameFromUserName(String userName) {
+	        try {
+	            DocumentSnapshot documentSnapshot = firestore.collection("users")
+	                    .document(userName)
+	                    .get()
+	                    .get();
+	            
+	            if (documentSnapshot.exists()) {
+	                String firstName = documentSnapshot.getString("firstName");
+	                String lastName = documentSnapshot.getString("lastName");
+	                
+	                if (firstName != null && lastName != null) {
+	                    return firstName + " " + lastName;
+	                } else {
+	                    return userName;
+	                }
+	            } else {
+	                return "Counsellor not found";
+	            }
+	        } catch (Exception e) {
+	            e.printStackTrace();
+	            return "Error retrieving Counsellor details";
+	        }
+	    }
+	    
 	    private UserReview getReviewFromReviewId(String reviewId) throws InterruptedException, ExecutionException {
 			DocumentSnapshot userReview = firestore.collection("reviews").document(reviewId).get().get();
 			return userReview.exists() ? userReview.toObject(UserReview.class) : null;

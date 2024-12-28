@@ -1,5 +1,6 @@
 package com.catalyst.ProCounsellor.model;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import com.google.cloud.Timestamp;
@@ -13,6 +14,7 @@ public class UserReview {
     private String photoUrl;
     private String counsellorName; 
     private String reviewText;
+    private List<String> userIdsLiked = new ArrayList<>(); 
     private float rating;
     private Timestamp timestamp;
     private Integer noOfLikes;

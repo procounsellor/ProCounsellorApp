@@ -1,8 +1,10 @@
 package com.catalyst.ProCounsellor.service;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 
@@ -49,13 +51,21 @@ public class ReviewService {
     public List<UserReview> getReviewsForCounsellor(String counsellorName) throws InterruptedException, ExecutionException {
         return firebaseService.getCounsellorReviews(counsellorName);
     }
+    
+    public String getCounsellorFullNameFromUserName(String counsellorName) {
+    	return firebaseService.getCounsellorFullNameFromUserName(counsellorName);
+    }
+    
+    public String getUserFullNameFromUserName(String userName) {
+    	return firebaseService.getUserFullNameFromUserName(userName);
+    }
 
     // Fetch a specific review from a user to a counselor
     public UserReview getReview(String userName, String counsellorName) throws Exception {
         return firebaseService.getSpecificReview(userName, counsellorName);
     }
     
-    public void likeReview(String reviewId) throws ExecutionException, InterruptedException, Exception {
+    public void likeReview(String reviewId, String userId) throws ExecutionException, InterruptedException, Exception {
         DocumentReference reviewRef = firestore.collection("reviews").document(reviewId);
         DocumentSnapshot document = reviewRef.get().get();
 
@@ -63,14 +73,23 @@ public class ReviewService {
             throw new Exception("Review with ID " + reviewId + " does not exist.");
         }
 
-        // Increment the noOfLikes field
-        Long currentLikes = document.getLong("noOfLikes");
-        if (currentLikes == null) currentLikes = 0L;
+        // Fetch current List of userIdsLiked
+        List<String> userIdsLiked = (List<String>) document.get("userIdsLiked");
+        if (userIdsLiked == null) {
+            userIdsLiked = new ArrayList<>();
+        }
 
-        reviewRef.update("noOfLikes", currentLikes + 1);
+        // Only add userId if not already in the List
+        if (!userIdsLiked.contains(userId)) {
+            userIdsLiked.add(userId);
+            reviewRef.update("userIdsLiked", userIdsLiked);
+
+            // Update the noOfLikes field based on the size of userIdsLiked list
+            reviewRef.update("noOfLikes", userIdsLiked.size());
+        }
     }
-    
-    public void unlikeReview(String reviewId) throws ExecutionException, InterruptedException, Exception {
+
+    public void unlikeReview(String reviewId, String userId) throws ExecutionException, InterruptedException, Exception {
         DocumentReference reviewRef = firestore.collection("reviews").document(reviewId);
         DocumentSnapshot document = reviewRef.get().get();
 
@@ -78,16 +97,20 @@ public class ReviewService {
             throw new Exception("Review with ID " + reviewId + " does not exist.");
         }
 
-        // Get the current number of likes
-        Long currentLikes = document.getLong("noOfLikes");
-        if (currentLikes == null || currentLikes == 0) {
-            throw new Exception("Review with ID " + reviewId + " has no likes to remove.");
+        // Fetch current List of userIdsLiked
+        List<String> userIdsLiked = (List<String>) document.get("userIdsLiked");
+        if (userIdsLiked == null || !userIdsLiked.contains(userId)) {
+            throw new Exception("Review with ID " + reviewId + " does not have this user liked.");
         }
 
-        // Decrement the noOfLikes field
-        reviewRef.update("noOfLikes", currentLikes - 1);
+        // Remove the userId from the List
+        userIdsLiked.remove(userId);
+        reviewRef.update("userIdsLiked", userIdsLiked);
+
+        // Update the noOfLikes field based on the size of userIdsLiked list
+        reviewRef.update("noOfLikes", userIdsLiked.size());
     }
-    
+
     public Integer getReviewLikes(String reviewId) throws ExecutionException, InterruptedException, Exception {
         DocumentReference reviewRef = firestore.collection("reviews").document(reviewId);
         DocumentSnapshot document = reviewRef.get().get();
@@ -96,10 +119,8 @@ public class ReviewService {
             throw new Exception("Review with ID " + reviewId + " does not exist.");
         }
 
-        Integer noOfLikes = document.getLong("noOfLikes") != null 
-                            ? document.getLong("noOfLikes").intValue() 
-                            : 0;
-        return noOfLikes;
+        List<String> userIdsLiked = (List<String>) document.get("userIdsLiked");
+        return (userIdsLiked != null) ? userIdsLiked.size() : 0;
     }
     
     // Method to add a comment to a review

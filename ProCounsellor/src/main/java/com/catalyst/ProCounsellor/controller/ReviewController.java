@@ -85,26 +85,26 @@ public class ReviewController {
         return ResponseEntity.ok(reviewService.getReview(userName, counsellorName));
     }
     
-    @PostMapping("/{reviewId}/like")
-    public ResponseEntity<String> likeReview(@PathVariable String reviewId) {
+    @PostMapping("/{userId}/{reviewId}/like")
+    public ResponseEntity<String> likeReview(@PathVariable String reviewId, @PathVariable String userId) {
         try {
-            reviewService.likeReview(reviewId);
+            reviewService.likeReview(reviewId, userId);
             return ResponseEntity.ok("Review liked successfully!");
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
         }
     }
-    
-    @PostMapping("/{reviewId}/unlike")
-    public ResponseEntity<String> unlikeReview(@PathVariable String reviewId) {
+
+    @PostMapping("/{userId}/{reviewId}/unlike")
+    public ResponseEntity<String> unlikeReview(@PathVariable String reviewId, @PathVariable String userId) {
         try {
-            reviewService.unlikeReview(reviewId);
+            reviewService.unlikeReview(reviewId, userId);
             return ResponseEntity.ok("Review unliked successfully!");
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
         }
     }
-    
+
     @GetMapping("/{reviewId}/likes")
     public ResponseEntity<Integer> getReviewLikes(@PathVariable String reviewId) {
         try {
@@ -165,5 +165,24 @@ public class ReviewController {
         }
     }
     
-    
+    @GetMapping("/counsellor/fullname/{counsellorName}")
+    public String getCounsellorFullName(@PathVariable String counsellorName) {
+        try {
+            // Call the service method to fetch the full name
+            return reviewService.getCounsellorFullNameFromUserName(counsellorName);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return "Error fetching counsellor's full name";
+        }
+    }    
+    @GetMapping("/user/fullname/{userName}")
+    public String getUserFullName(@PathVariable String userName) {
+        try {
+            // Call the service method to fetch the full name
+            return reviewService.getUserFullNameFromUserName(userName);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return "Error fetching counsellor's full name";
+        }
+    } 
 }
