@@ -18,6 +18,9 @@ public class User {
     private String password;
     private String role; 
     private String photo;
+    private List<AllowedStates> userInterestedStateOfCounsellors;
+    //mandatory field
+    private Courses interestedCourse;//right now, allowing only one degree interest per user. //Aligning with counsellor's expertise
     private List<String> subscribedCounsellorIds; 
     private List<String> followedCounsellorsIds;
     private Double balance; 
