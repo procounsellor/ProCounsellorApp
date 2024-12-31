@@ -16,15 +16,15 @@ public class Counsellor {
     private String phoneNumber; 
     private String description;// to be written in third party
     private String email;
-    private String photoUrl;// to be changed in the proper format
+    private String photoUrl;
     private String password;
     private String organisationName;
     private String experience;
     private String role;
+    private AllowedStates stateOfCounsellor;
     private Address address;
-    private Double ratePerMinuteCall;
-    private Double ratePerMinuteVideoCall;
-    private Double ratePerMinuteChat;
+    private Double ratePerYear;
+    private List<Courses> expertise; //align with user's interested course
     private Integer noOfClients;
     private Integer noOfFollowers;
     private List<String> clientIds;
@@ -37,6 +37,5 @@ public class Counsellor {
     private String minuteSpendOnVideoCall;
     //to be verified by admin;
     private boolean isVerified;
-    private String cityOfCounsellor;
     private StateType state;
 }

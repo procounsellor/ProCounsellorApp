@@ -19,11 +19,14 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
+import com.catalyst.ProCounsellor.model.AllowedStates;
 import com.catalyst.ProCounsellor.model.Counsellor;
+import com.catalyst.ProCounsellor.model.Courses;
 import com.catalyst.ProCounsellor.model.User;
 import com.catalyst.ProCounsellor.service.FirebaseService;
 import com.catalyst.ProCounsellor.service.PhotoService;
 import com.catalyst.ProCounsellor.service.UserService;
+import com.google.api.gax.rpc.NotFoundException;
 
 @RestController
 @RequestMapping("/api/user")
@@ -251,6 +254,83 @@ public class UserController {
 	            // Log the error and return false
 	            System.err.println("Error checking user online status: " + e.getMessage());
 	            return false;
+	        }
+	    }
+	    
+	    /**
+	     * To fetch the list of counsellors according to user's interested course (All over India - no location filter)
+	     * @param userName
+	     * @return
+	     */
+	    @GetMapping("/{userName}/counsellorsAccordingToInterestedCourse/all")
+	    public ResponseEntity<List<Counsellor>> getCounsellorsByUserInterest(@PathVariable String userName) {
+	        try {
+	            User user = firebaseService.getUserById(userName);
+	            Courses interestedCourse = user.getInterestedCourse();
+	            List<Counsellor> matchingCounsellors = userService.getCounsellorsByCourse(interestedCourse);
+	            
+	            return new ResponseEntity<>(matchingCounsellors, HttpStatus.OK);
+	        } catch (NotFoundException e) {
+	            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+	        } catch (ExecutionException | InterruptedException e) {
+	            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
+	        }
+	    }
+	    
+	    /**
+	     *To fetch the list of counsellors according to user's interested course (KARNATAKA)
+	     */
+	    @GetMapping("/{userName}/counsellorsAccordingToInterestedCourse/karnataka")
+	    public ResponseEntity<List<Counsellor>> getCounsellorsInKarnataka(@PathVariable String userName) {
+	        try {
+	            User user = firebaseService.getUserById(userName);
+	            Courses interestedCourse = user.getInterestedCourse();
+	            List<Counsellor> counsellors = userService
+	                    .getCounsellorsByCourseAndState(interestedCourse, AllowedStates.KARNATAKA);
+
+	            return new ResponseEntity<>(counsellors, HttpStatus.OK);
+	        } catch (NotFoundException e) {
+	            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+	        } catch (ExecutionException | InterruptedException e) {
+	            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
+	        }
+	    }
+
+	    /**
+	     *To fetch the list of counsellors according to user's interested course (MAHARASHTRA)
+	     */
+	    @GetMapping("/{userName}/counsellorsAccordingToInterestedCourse/maharashtra")
+	    public ResponseEntity<List<Counsellor>> getCounsellorsInMaharashtra(@PathVariable String userName) {
+	        try {
+	            User user = firebaseService.getUserById(userName);
+	            Courses interestedCourse = user.getInterestedCourse();
+	            List<Counsellor> counsellors = userService
+	                    .getCounsellorsByCourseAndState(interestedCourse, AllowedStates.MAHARASHTRA);
+
+	            return new ResponseEntity<>(counsellors, HttpStatus.OK);
+	        } catch (NotFoundException e) {
+	            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+	        } catch (ExecutionException | InterruptedException e) {
+	            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
+	        }
+	    }
+
+	    /**
+	     * To fetch the list of counsellors according to user's interested course (TAMILNADU)
+	     */
+	    @GetMapping("/{userName}/counsellorsAccordingToInterestedCourse/tamilnadu")
+	    public ResponseEntity<List<Counsellor>> getCounsellorsInTamilNadu(@PathVariable String userName) {
+	        try {
+	            User user = firebaseService.getUserById(userName);
+	            Courses interestedCourse = user.getInterestedCourse();
+	            List<Counsellor> counsellors = userService
+	                    .getCounsellorsByCourseAndState(interestedCourse, AllowedStates.TAMILNADU);
+
+	            return new ResponseEntity<>(counsellors, HttpStatus.OK);
+	        } catch (NotFoundException e) {
+	            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+	        } catch (ExecutionException | InterruptedException e) {
+	            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
 	        }
 	    }
 

@@ -3,7 +3,9 @@ package com.catalyst.ProCounsellor.service;
 
 import com.catalyst.ProCounsellor.exception.InvalidCredentialsException;
 import com.catalyst.ProCounsellor.exception.UserNotFoundException;
+import com.catalyst.ProCounsellor.model.AllowedStates;
 import com.catalyst.ProCounsellor.model.Counsellor;
+import com.catalyst.ProCounsellor.model.Courses;
 import com.catalyst.ProCounsellor.model.User;
 import com.catalyst.ProCounsellor.model.UserState;
 import com.google.api.core.ApiFuture;
@@ -25,6 +27,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.logging.Logger;
+import java.util.stream.Collectors;
 
 @Service
 public class UserService {
@@ -386,4 +389,35 @@ public class UserService {
 		    // Return the result after the callback completes
 		    return isOnline[0];
 		}
+	 
+	 public List<Counsellor> getCounsellorsByCourse(Courses course) throws ExecutionException, InterruptedException {
+	        ApiFuture<QuerySnapshot> future = firestore
+	                .collection("counsellors")
+	                .whereArrayContains("expertise", course) 
+	                .get();
+
+	        List<QueryDocumentSnapshot> documents = future.get().getDocuments();
+	        return documents.stream()
+	                        .map(doc -> doc.toObject(Counsellor.class))
+	                        .collect(Collectors.toList());
+	    }
+	 
+	 /**
+	     * Fetch counsellors whose 'expertise' (list of Courses) contains the user’s interestedCourse
+	     * AND whose 'stateOfCounsellor' equals the specified state.
+	     */
+	    public List<Counsellor> getCounsellorsByCourseAndState(Courses course, AllowedStates state)
+	            throws ExecutionException, InterruptedException {
+	        
+	        ApiFuture<QuerySnapshot> future = firestore
+	                .collection("counsellors")
+	                .whereArrayContains("expertise", course)
+	                .whereEqualTo("stateOfCounsellor", state) 
+	                .get();
+
+	        List<QueryDocumentSnapshot> documents = future.get().getDocuments();
+	        return documents.stream()
+	                        .map(doc -> doc.toObject(Counsellor.class))
+	                        .collect(Collectors.toList());
+	    }
 }
