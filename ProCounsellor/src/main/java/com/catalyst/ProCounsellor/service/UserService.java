@@ -21,8 +21,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
@@ -42,39 +44,111 @@ public class UserService {
 
     // Signup functionality
     public String signup(User user) throws ExecutionException, InterruptedException {
-    	System.out.println(user.getFirstName());
         Firestore dbFirestore = FirestoreClient.getFirestore();
-        DocumentReference documentReference = dbFirestore.collection(USERS).document(user.getUserName());
 
-        // Check if user already exists
-        if (documentReference.get().get().exists()) {
-            return "User already exists with ID: " + user.getUserName();
+        // Validate mandatory fields
+        if (user.getUserName() == null || user.getUserName().isEmpty()) {
+            return "UserName is mandatory and cannot be null or empty.";
+        }
+        if (user.getPhoneNumber() == null || user.getPhoneNumber().isEmpty()) {
+            return "Phone number is mandatory and cannot be null or empty.";
+        }
+        if (user.getEmail() == null || user.getEmail().isEmpty()) {
+            return "Email is mandatory and cannot be null or empty.";
+        }
+        if (user.getFirstName() == null || user.getFirstName().isEmpty()) {
+            return "First name is mandatory and cannot be null or empty.";
+        }
+        if (user.getLastName() == null || user.getLastName().isEmpty()) {
+            return "Last name is mandatory and cannot be null or empty.";
+        }
+        if (user.getPassword() == null || user.getPassword().isEmpty()) {
+            return "Password is mandatory and cannot be null or empty.";
+        }
+        if (user.getUserInterestedStateOfCounsellors() == null || user.getUserInterestedStateOfCounsellors().isEmpty()) {
+            return "User interested state of counsellors cannot be null or empty.";
+        }
+        if (user.getInterestedCourse() == null || user.getInterestedCourse().toString().isEmpty()) {
+            return "Interested course cannot be null or empty.";
+        }
+
+        // Check for uniqueness of userName
+        DocumentReference userDocRef = dbFirestore.collection(USERS).document(user.getUserName());
+        if (userDocRef.get().get().exists()) {
+            return "User already exists with userName: " + user.getUserName();
+        }
+
+        // Check for uniqueness of phoneNumber and email
+        CollectionReference usersCollection = dbFirestore.collection(USERS);
+        Query phoneQuery = usersCollection.whereEqualTo("phoneNumber", user.getPhoneNumber());
+        Query emailQuery = usersCollection.whereEqualTo("email", user.getEmail());
+
+        if (!phoneQuery.get().get().isEmpty()) {
+            return "Phone number already exists: " + user.getPhoneNumber();
+        }
+        if (!emailQuery.get().get().isEmpty()) {
+            return "Email already exists: " + user.getEmail();
         }
 
         // Save new user
-        ApiFuture<WriteResult> collectionsApiFuture = documentReference.set(user);
+        ApiFuture<WriteResult> collectionsApiFuture = userDocRef.set(user);
         return "Signup successful! User ID: " + user.getUserName();
     }
 
     // Signin functionality
-    public String signin(User user) throws ExecutionException, InterruptedException {
+    public String signin(String identifier, String password) throws ExecutionException, InterruptedException {
         Firestore dbFirestore = FirestoreClient.getFirestore();
-        DocumentSnapshot documentSnapshot = dbFirestore.collection(USERS)
-                                                        .document(user.getUserName())
-                                                        .get()
-                                                        .get();
+        CollectionReference userCollection = dbFirestore.collection(USERS);
 
-        if (documentSnapshot.exists()) {
-            User existingUser = documentSnapshot.toObject(User.class);
-            if (existingUser.getPassword().equals(user.getPassword())) {
-                return "Signin successful for User ID: " + user.getUserName();
+        // Determine the identifier type and query the Firestore
+        Query query;
+        if (identifier.contains("@")) {
+            // If it contains '@', treat it as email
+            query = userCollection.whereEqualTo("email", identifier);
+        } else if (identifier.matches("\\d+")) {
+            // If it's numeric, treat it as phone number
+            query = userCollection.whereEqualTo("phoneNumber", identifier);
+        } else {
+            // Otherwise, treat it as userName (DocumentId)
+            DocumentReference docRef = userCollection.document(identifier);
+
+            // Check if the document exists
+            DocumentSnapshot documentSnapshot = docRef.get().get();
+            if (documentSnapshot.exists()) {
+                User existingUser = documentSnapshot.toObject(User.class);
+
+                // Validate the password
+                if (existingUser.getPassword().equals(password)) {
+                    return "Signin successful for User ID: " + identifier;
+                } else {
+                    throw new InvalidCredentialsException("Invalid credentials provided.");
+                }
+            } else {
+                throw new UserNotFoundException("User not found for userName: " + identifier);
+            }
+        }
+
+        // Execute the query for email or phoneNumber
+        List<QueryDocumentSnapshot> documents = query.get().get().getDocuments();
+
+        if (!documents.isEmpty()) {
+            // Fetch the first matching document
+            QueryDocumentSnapshot document = documents.get(0);
+            User existingUser = document.toObject(User.class);
+
+            // Validate the password
+            if (existingUser.getPassword().equals(password)) {
+                String userName = document.getId(); // Get the DocumentId as userName
+                return "Signin successful for User ID: " + userName;
             } else {
                 throw new InvalidCredentialsException("Invalid credentials provided.");
             }
         } else {
-            throw new UserNotFoundException("User not found for User ID: " + user.getUserName());
+            throw new UserNotFoundException("Counsellor not found for the provided credentials.");
         }
     }
+
+
     
     public boolean subscribeToCounsellor(String userId, String counsellorId) {
         try {
@@ -402,7 +476,7 @@ public class UserService {
 	                        .collect(Collectors.toList());
 	    }
 	 
-	 /**
+	 	/**
 	     * Fetch counsellors whose 'expertise' (list of Courses) contains the user’s interestedCourse
 	     * AND whose 'stateOfCounsellor' equals the specified state.
 	     */
@@ -420,4 +494,38 @@ public class UserService {
 	                        .map(doc -> doc.toObject(Counsellor.class))
 	                        .collect(Collectors.toList());
 	    }
+	    
+	    
+	    public String getUserNameFromEmail(String email) throws ExecutionException, InterruptedException {
+	        Firestore dbFirestore = FirestoreClient.getFirestore();
+	        CollectionReference usersCollection = dbFirestore.collection(USERS);
+
+	        // Query to find user by email
+	        Query query = usersCollection.whereEqualTo("email", email);
+	        List<QueryDocumentSnapshot> documents = query.get().get().getDocuments();
+
+	        if (!documents.isEmpty()) {
+	            User user = documents.get(0).toObject(User.class);
+	            return user.getUserName();
+	        } else {
+	            throw new UserNotFoundException("No user found with email: " + email);
+	        }
+	    }
+
+	    public String getUserNameFromPhoneNumber(String phoneNumber) throws ExecutionException, InterruptedException {
+	        Firestore dbFirestore = FirestoreClient.getFirestore();
+	        CollectionReference usersCollection = dbFirestore.collection(USERS);
+
+	        // Query to find user by phone number
+	        Query query = usersCollection.whereEqualTo("phoneNumber", phoneNumber);
+	        List<QueryDocumentSnapshot> documents = query.get().get().getDocuments();
+
+	        if (!documents.isEmpty()) {
+	            User user = documents.get(0).toObject(User.class);
+	            return user.getUserName();
+	        } else {
+	            throw new UserNotFoundException("No user found with phone number: " + phoneNumber);
+	        }
+	    }
+
 }

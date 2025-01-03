@@ -1,6 +1,7 @@
 package com.catalyst.ProCounsellor.controller;
 
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
@@ -19,6 +20,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
+import com.catalyst.ProCounsellor.exception.UserNotFoundException;
 import com.catalyst.ProCounsellor.model.AllowedStates;
 import com.catalyst.ProCounsellor.model.Counsellor;
 import com.catalyst.ProCounsellor.model.Courses;
@@ -333,5 +335,24 @@ public class UserController {
 	            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
 	        }
 	    }
+	    
+	    @GetMapping("/getUserNameFromEmail")
+	    public String getUserNameFromEmail(@RequestParam String email) throws ExecutionException, InterruptedException {
+	        try {
+	            String userName = userService.getUserNameFromEmail(email);
+	            return userName;
+	        } catch (UserNotFoundException e) {
+	            return "Cannot find User ID";
+	        }
+	    }
 
+	    @GetMapping("/getUserNameFromPhoneNumber")
+	    public String getUserNameFromPhoneNumber(@RequestParam String phoneNumber) throws ExecutionException, InterruptedException {
+	        try {
+	            String userName = userService.getUserNameFromPhoneNumber(phoneNumber);
+	            return userName;
+	        } catch (UserNotFoundException e) {
+	        	return "Cannot find User ID";
+	        }
+	    }
 }
