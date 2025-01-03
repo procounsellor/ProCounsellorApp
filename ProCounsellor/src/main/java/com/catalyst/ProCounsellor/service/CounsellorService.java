@@ -38,37 +38,114 @@ public class CounsellorService {
     // Signup functionality
     public String signup(Counsellor counsellor) throws ExecutionException, InterruptedException {
         Firestore dbFirestore = FirestoreClient.getFirestore();
-        DocumentReference documentReference = dbFirestore.collection(COUNSELLORS).document(counsellor.getUserName());
 
-        // Check if user already exists
-        if (documentReference.get().get().exists()) {
-            return "User already exists with ID: " + counsellor.getUserName();
+        // Validate mandatory fields
+        if (counsellor.getUserName() == null || counsellor.getUserName().isEmpty()) {
+            return "UserName is mandatory and cannot be null or empty.";
+        }
+        if (counsellor.getFirstName() == null || counsellor.getFirstName().isEmpty()) {
+            return "First name is mandatory and cannot be null or empty.";
+        }
+        if (counsellor.getLastName() == null || counsellor.getLastName().isEmpty()) {
+            return "Last name is mandatory and cannot be null or empty.";
+        }
+        if (counsellor.getPhoneNumber() == null || counsellor.getPhoneNumber().isEmpty()) {
+            return "Phone number is mandatory and cannot be null or empty.";
+        }
+        if (counsellor.getEmail() == null || counsellor.getEmail().isEmpty()) {
+            return "Email is mandatory and cannot be null or empty.";
+        }
+        if (counsellor.getPassword() == null || counsellor.getPassword().isEmpty()) {
+            return "Password is mandatory and cannot be null or empty.";
+        }
+        if (counsellor.getRatePerYear() == null || counsellor.getRatePerYear() <= 0) {
+            return "Rate per year must be greater than 0.";
+        }
+        if (counsellor.getStateOfCounsellor() == null || counsellor.getStateOfCounsellor().toString().isEmpty()) {
+            return "State of counsellor cannot be null or empty.";
+        }
+        if (counsellor.getExpertise() == null || counsellor.getExpertise().isEmpty()) {
+            return "Expertise cannot be null or empty.";
         }
 
-        // Save new user
-        ApiFuture<WriteResult> collectionsApiFuture = documentReference.set(counsellor);
+        // Check for uniqueness of userName
+        DocumentReference userDocRef = dbFirestore.collection(COUNSELLORS).document(counsellor.getUserName());
+        if (userDocRef.get().get().exists()) {
+            return "User already exists with userName: " + counsellor.getUserName();
+        }
+
+        // Check for uniqueness of phoneNumber and email
+        CollectionReference counsellorsCollection = dbFirestore.collection(COUNSELLORS);
+        Query phoneQuery = counsellorsCollection.whereEqualTo("phoneNumber", counsellor.getPhoneNumber());
+        Query emailQuery = counsellorsCollection.whereEqualTo("email", counsellor.getEmail());
+
+        if (!phoneQuery.get().get().isEmpty()) {
+            return "Phone number already exists: " + counsellor.getPhoneNumber();
+        }
+        if (!emailQuery.get().get().isEmpty()) {
+            return "Email already exists: " + counsellor.getEmail();
+        }
+
+        // Save new counsellor
+        ApiFuture<WriteResult> collectionsApiFuture = userDocRef.set(counsellor);
         return "Signup successful! User ID: " + counsellor.getUserName();
     }
 
-    // Signin functionality
-    public String signin(Counsellor counsellor) throws ExecutionException, InterruptedException {
-        Firestore dbFirestore = FirestoreClient.getFirestore();
-        DocumentSnapshot documentSnapshot = dbFirestore.collection(COUNSELLORS)
-                                                        .document(counsellor.getUserName())
-                                                        .get()
-                                                        .get();
 
-        if (documentSnapshot.exists()) {
-            Counsellor existingCounsellor = documentSnapshot.toObject(Counsellor.class);
-            if (existingCounsellor.getPassword().equals(counsellor.getPassword())) {
-                return "Signin successful for User ID: " + counsellor.getUserName();
+    // Signin functionality
+    public String signin(String identifier, String password) throws ExecutionException, InterruptedException {
+        Firestore dbFirestore = FirestoreClient.getFirestore();
+        CollectionReference counsellorsCollection = dbFirestore.collection(COUNSELLORS);
+
+        // Determine the identifier type and query the Firestore
+        Query query;
+        if (identifier.contains("@")) {
+            // If it contains '@', treat it as email
+            query = counsellorsCollection.whereEqualTo("email", identifier);
+        } else if (identifier.matches("\\d+")) {
+            // If it's numeric, treat it as phone number
+            query = counsellorsCollection.whereEqualTo("phoneNumber", identifier);
+        } else {
+            // Otherwise, treat it as userName (DocumentId)
+            DocumentReference docRef = counsellorsCollection.document(identifier);
+
+            // Check if the document exists
+            DocumentSnapshot documentSnapshot = docRef.get().get();
+            if (documentSnapshot.exists()) {
+                Counsellor existingCounsellor = documentSnapshot.toObject(Counsellor.class);
+
+                // Validate the password
+                if (existingCounsellor.getPassword().equals(password)) {
+                    return "Signin successful for Counsellor ID: " + identifier;
+                } else {
+                    throw new InvalidCredentialsException("Invalid credentials provided.");
+                }
+            } else {
+                throw new UserNotFoundException("Counsellor not found for userName: " + identifier);
+            }
+        }
+
+        // Execute the query for email or phoneNumber
+        List<QueryDocumentSnapshot> documents = query.get().get().getDocuments();
+
+        if (!documents.isEmpty()) {
+            // Fetch the first matching document
+            QueryDocumentSnapshot document = documents.get(0);
+            Counsellor existingCounsellor = document.toObject(Counsellor.class);
+
+            // Validate the password
+            if (existingCounsellor.getPassword().equals(password)) {
+                String userName = document.getId(); // Get the DocumentId as userName
+                return "Signin successful for Counsellor ID: " + userName;
             } else {
                 throw new InvalidCredentialsException("Invalid credentials provided.");
             }
         } else {
-            throw new UserNotFoundException("Counsellor not found for ID: " + counsellor.getUserName());
+            throw new UserNotFoundException("Counsellor not found for the provided credentials.");
         }
     }
+
+
     
     public List<Counsellor> getAllCounsellors() {
         Firestore firestore = FirestoreClient.getFirestore();
@@ -318,5 +395,38 @@ public class CounsellorService {
 		    // Return the result after the callback completes
 		    return isOnline[0];
 		}
+	 
+	 public String getUserNameFromEmail(String email) throws ExecutionException, InterruptedException {
+		    Firestore dbFirestore = FirestoreClient.getFirestore();
+		    CollectionReference counsellorsCollection = dbFirestore.collection(COUNSELLORS);
+
+		    // Query to find counsellor by email
+		    Query query = counsellorsCollection.whereEqualTo("email", email);
+		    List<QueryDocumentSnapshot> documents = query.get().get().getDocuments();
+
+		    if (!documents.isEmpty()) {
+		        Counsellor counsellor = documents.get(0).toObject(Counsellor.class);
+		        return counsellor.getUserName();
+		    } else {
+		        throw new UserNotFoundException("No counsellor found with email: " + email);
+		    }
+		}
+
+		public String getUserNameFromPhoneNumber(String phoneNumber) throws ExecutionException, InterruptedException {
+		    Firestore dbFirestore = FirestoreClient.getFirestore();
+		    CollectionReference counsellorsCollection = dbFirestore.collection(COUNSELLORS);
+
+		    // Query to find counsellor by phone number
+		    Query query = counsellorsCollection.whereEqualTo("phoneNumber", phoneNumber);
+		    List<QueryDocumentSnapshot> documents = query.get().get().getDocuments();
+
+		    if (!documents.isEmpty()) {
+		        Counsellor counsellor = documents.get(0).toObject(Counsellor.class);
+		        return counsellor.getUserName();
+		    } else {
+		        throw new UserNotFoundException("No counsellor found with phone number: " + phoneNumber);
+		    }
+		}
+
 
 }

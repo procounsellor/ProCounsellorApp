@@ -1,6 +1,7 @@
 package com.catalyst.ProCounsellor.controller;
 
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
@@ -18,6 +19,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
+import com.catalyst.ProCounsellor.exception.UserNotFoundException;
 import com.catalyst.ProCounsellor.model.Counsellor;
 import com.catalyst.ProCounsellor.model.StateType;
 import com.catalyst.ProCounsellor.model.User;
@@ -170,5 +172,24 @@ public class CounsellorController {
             return false;
         }
     }
+    
+    @GetMapping("/getCounsellorUserNameFromEmail")
+    public String getCounsellorUserNameFromEmail(@RequestParam String email) throws ExecutionException, InterruptedException {
+        try {
+            String counsellorName = counsellorService.getUserNameFromEmail(email);
+            return counsellorName;
+        } catch (UserNotFoundException e) {
+        	return "Cannot find Counsellor ID";
+        }
+    }
 
+    @GetMapping("/getCounsellorUserNameFromPhoneNumber")
+    public String getCounsellorUserNameFromPhoneNumber(@RequestParam String phoneNumber) throws ExecutionException, InterruptedException {
+        try {
+            String counsellorName = counsellorService.getUserNameFromPhoneNumber(phoneNumber);
+            return counsellorName;
+        } catch (UserNotFoundException e) {
+            return "Cannot find Counsellor ID";
+        }
+    }
 }
