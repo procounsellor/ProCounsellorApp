@@ -12,6 +12,7 @@ import com.catalyst.ProCounsellor.model.Counsellor;
 import com.catalyst.ProCounsellor.model.User;
 import com.catalyst.ProCounsellor.service.AdminService;
 import com.catalyst.ProCounsellor.service.CounsellorService;
+import com.catalyst.ProCounsellor.service.OTPService;
 import com.catalyst.ProCounsellor.service.UserService;
 
 import java.util.HashMap;
@@ -30,6 +31,9 @@ public class AuthController {
     
     @Autowired
     private AdminService adminAuthService;
+    
+    @Autowired
+    private OTPService otpService;
 
     @PostMapping("/userSignup")
     public ResponseEntity<Map<String, Object>> userSignup(@RequestBody User user) throws ExecutionException, InterruptedException {
@@ -102,5 +106,60 @@ public class AuthController {
         response.put("message", message);
         response.put("status", status.value());
         return new ResponseEntity<>(response, status);
+    }
+    
+    @PostMapping("/generateOtp")
+    public ResponseEntity<String> generateOtp(@RequestParam String phoneNumber) {
+        if (phoneNumber == null || phoneNumber.isEmpty()) {
+            return ResponseEntity.badRequest().body("Phone number is mandatory and cannot be null or empty.");
+        }
+        String response = otpService.generateAndSendOtp(phoneNumber);
+        return ResponseEntity.ok(response);
+    }
+    
+    @PostMapping("/verifyAndUserSignup")
+    public ResponseEntity<Map<String, Object>> verifyAndSignup(@RequestParam String phoneNumber, @RequestParam String otp) throws ExecutionException, InterruptedException {
+        if (phoneNumber == null || phoneNumber.isEmpty()) {
+            return ResponseEntity.badRequest().body(Map.of("message", "Phone number is mandatory and cannot be null or empty."));
+        }
+
+        if (!otpService.verifyOtp(phoneNumber, otp)) {
+            return ResponseEntity.badRequest().body(Map.of("message", "Invalid or expired OTP. Please try again."));
+        }
+
+        // Check for existing user or proceed to sign up
+        String responseMessage;
+        HttpStatus responseStatus;
+
+        if (userService.isPhoneNumberExists(phoneNumber)) {
+            responseMessage = "Phone number already exists. User logged in successfully.";
+            responseStatus = HttpStatus.OK; // 200 OK for existing users
+        } else {
+            responseMessage = userService.newSignup(phoneNumber);
+            responseStatus = responseMessage.startsWith("Signup successful") ? HttpStatus.CREATED : HttpStatus.BAD_REQUEST; // 201 Created for new signup
+        }
+
+        return buildResponse(responseMessage, responseStatus);
+    }
+    
+    @GetMapping("/isUserDetailsNull")
+    public ResponseEntity<Boolean> isUserDetailsNull(@RequestParam String phoneNumber) throws ExecutionException, InterruptedException {
+    	phoneNumber = phoneNumber.replace(" ", "+");
+        if (phoneNumber == null || phoneNumber.isEmpty()) {
+            return ResponseEntity.badRequest().body(false);
+        }
+
+        // Fetch the user details
+        User user = userService.getUserById(phoneNumber);
+        if (user == null) {
+        	System.out.println("nulllll");
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(true); // Assume details are null if user doesn't exist
+        }
+
+        // Check if both fields are null
+        boolean isNull = (user.getUserInterestedStateOfCounsellors() == null || user.getUserInterestedStateOfCounsellors().isEmpty())
+                && user.getInterestedCourse() == null;
+
+        return ResponseEntity.ok(isNull);
     }
 }
