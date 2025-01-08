@@ -5,6 +5,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import com.catalyst.ProCounsellor.config.JwtKeyProvider;
 import com.catalyst.ProCounsellor.exception.InvalidCredentialsException;
 import com.catalyst.ProCounsellor.exception.UserNotFoundException;
 import com.catalyst.ProCounsellor.model.Admin;
@@ -15,6 +16,11 @@ import com.catalyst.ProCounsellor.service.CounsellorService;
 import com.catalyst.ProCounsellor.service.OTPService;
 import com.catalyst.ProCounsellor.service.UserService;
 
+import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.SignatureAlgorithm;
+
+import java.util.Base64;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
@@ -118,7 +124,9 @@ public class AuthController {
     }
     
     @PostMapping("/verifyAndUserSignup")
-    public ResponseEntity<Map<String, Object>> verifyAndSignup(@RequestParam String phoneNumber, @RequestParam String otp) throws ExecutionException, InterruptedException {
+    public ResponseEntity<Map<String, Object>> verifyAndSignup(
+            @RequestParam String phoneNumber, @RequestParam String otp) throws ExecutionException, InterruptedException {
+
         if (phoneNumber == null || phoneNumber.isEmpty()) {
             return ResponseEntity.badRequest().body(Map.of("message", "Phone number is mandatory and cannot be null or empty."));
         }
@@ -127,20 +135,34 @@ public class AuthController {
             return ResponseEntity.badRequest().body(Map.of("message", "Invalid or expired OTP. Please try again."));
         }
 
-        // Check for existing user or proceed to sign up
         String responseMessage;
         HttpStatus responseStatus;
+        String jwtToken = null;
 
         if (userService.isPhoneNumberExists(phoneNumber)) {
             responseMessage = "Phone number already exists. User logged in successfully.";
-            responseStatus = HttpStatus.OK; // 200 OK for existing users
+            responseStatus = HttpStatus.OK; // Existing user
         } else {
             responseMessage = userService.newSignup(phoneNumber);
-            responseStatus = responseMessage.startsWith("Signup successful") ? HttpStatus.CREATED : HttpStatus.BAD_REQUEST; // 201 Created for new signup
+            responseStatus = responseMessage.startsWith("Signup successful") ? HttpStatus.CREATED : HttpStatus.BAD_REQUEST; // New signup
         }
 
-        return buildResponse(responseMessage, responseStatus);
+        if (responseStatus != HttpStatus.BAD_REQUEST) {
+            // Generate JWT Token using the centralized key
+            jwtToken = Jwts.builder()
+                    .setSubject(phoneNumber)
+                    .setIssuedAt(new Date())
+                    .setExpiration(new Date(System.currentTimeMillis() + 86400000 * 365))
+                    .signWith(JwtKeyProvider.getSigningKey())
+                    .compact();
+        }
+        System.out.println(JwtKeyProvider.getSigningKey().toString());
+
+        return ResponseEntity.status(responseStatus).body(Map.of(
+                "message", responseMessage,
+                "jwtToken", jwtToken));
     }
+
     
     @GetMapping("/isUserDetailsNull")
     public ResponseEntity<Boolean> isUserDetailsNull(@RequestParam String phoneNumber) throws ExecutionException, InterruptedException {
