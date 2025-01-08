@@ -41,6 +41,39 @@ public class UserService {
 	
     private static final String USERS = "users";
     
+    // New Signup functionality
+    public String newSignup(String phoneNumber) throws ExecutionException, InterruptedException {
+        Firestore dbFirestore = FirestoreClient.getFirestore();
+
+        // Check for uniqueness of phoneNumber
+        CollectionReference usersCollection = dbFirestore.collection(USERS);
+        Query phoneQuery = usersCollection.whereEqualTo("phoneNumber", phoneNumber);
+
+        if (!phoneQuery.get().get().isEmpty()) {
+            return "Phone number already exists: " + phoneNumber;
+        }
+
+        // Create new user object
+        User user = new User();
+        user.setPhoneNumber(phoneNumber);
+        user.setUserName(phoneNumber); // Use phone number as userName
+        user.setRole("user");
+
+        // Save new user
+        DocumentReference userDocRef = dbFirestore.collection(USERS).document(user.getUserName());
+        ApiFuture<WriteResult> collectionsApiFuture = userDocRef.set(user);
+
+        return "Signup successful! User ID: " + user.getUserName();
+    }
+    
+    public boolean isPhoneNumberExists(String phoneNumber) throws ExecutionException, InterruptedException {
+        Firestore dbFirestore = FirestoreClient.getFirestore();
+        CollectionReference usersCollection = dbFirestore.collection(USERS);
+        Query phoneQuery = usersCollection.whereEqualTo("phoneNumber", phoneNumber);
+
+        return !phoneQuery.get().get().isEmpty();
+    }
+    
 
     // Signup functionality
     public String signup(User user) throws ExecutionException, InterruptedException {
@@ -526,6 +559,11 @@ public class UserService {
 	        } else {
 	            throw new UserNotFoundException("No user found with phone number: " + phoneNumber);
 	        }
+	    }
+	    
+	    public User getUserById(String userId) throws ExecutionException, InterruptedException {
+	        DocumentSnapshot snapshot = firestore.collection(USERS).document(userId).get().get();
+	        return snapshot.exists() ? snapshot.toObject(User.class) : null;
 	    }
 
 }
