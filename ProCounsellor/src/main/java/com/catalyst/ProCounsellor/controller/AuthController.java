@@ -15,6 +15,8 @@ import com.catalyst.ProCounsellor.service.AdminService;
 import com.catalyst.ProCounsellor.service.CounsellorService;
 import com.catalyst.ProCounsellor.service.OTPService;
 import com.catalyst.ProCounsellor.service.UserService;
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseAuthException;
 
 import io.jsonwebtoken.Jwts;
 import java.util.Date;
@@ -123,7 +125,7 @@ public class AuthController {
     
     @PostMapping("/verifyAndUserSignup")
     public ResponseEntity<Map<String, Object>> verifyAndSignup(
-            @RequestParam String phoneNumber, @RequestParam String otp) throws ExecutionException, InterruptedException {
+            @RequestParam String phoneNumber, @RequestParam String otp) throws ExecutionException, InterruptedException, FirebaseAuthException {
 
         if (phoneNumber == null || phoneNumber.isEmpty()) {
             return ResponseEntity.badRequest().body(Map.of("message", "Phone number is mandatory and cannot be null or empty."));
@@ -137,6 +139,7 @@ public class AuthController {
         HttpStatus responseStatus;
         String jwtToken = null;
         String userId;
+        String firebaseCustomToken = null;
         
 		if (userService.isPhoneNumberExists(phoneNumber)) {
             responseMessage = "Phone number already exists. User logged in successfully.";
@@ -149,6 +152,7 @@ public class AuthController {
         }
 
         if (responseStatus != HttpStatus.BAD_REQUEST) {
+        	firebaseCustomToken = FirebaseAuth.getInstance().createCustomToken(userId);
             // Generate JWT Token using the centralized key
             jwtToken = Jwts.builder()
                     .setSubject(phoneNumber)
@@ -157,10 +161,10 @@ public class AuthController {
                     .signWith(JwtKeyProvider.getSigningKey())
                     .compact();
         }
-        System.out.println(JwtKeyProvider.getSigningKey().toString());
 
         return ResponseEntity.status(responseStatus).body(Map.of(
                 "message", responseMessage,
+                "firebaseCustomToken", firebaseCustomToken,
                 "jwtToken", jwtToken,
                 "userId", userId));
     }
