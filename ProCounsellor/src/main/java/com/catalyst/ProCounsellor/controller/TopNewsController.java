@@ -3,7 +3,6 @@ package com.catalyst.ProCounsellor.controller;
 import com.catalyst.ProCounsellor.model.TopNews;
 import com.catalyst.ProCounsellor.service.TopNewsService;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.cloud.firestore.CollectionReference;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -59,4 +58,31 @@ public class TopNewsController {
                     return ResponseEntity.ok(news);
                 });
     }
+    
+    @PutMapping(value = "/{newsId}", consumes = {"multipart/form-data"})
+    public ResponseEntity<String> updateNewsWithImage(
+            @PathVariable String newsId,
+            @RequestParam(value = "news", required = false) TopNews updatedNews,
+            @RequestParam(value = "image", required = false) MultipartFile imageFile) {
+        try {
+            if (updatedNews == null && (imageFile == null || imageFile.isEmpty())) {
+                return ResponseEntity.badRequest().body("No data provided to update");
+            }
+            newsService.updateNewsWithImage(newsId, updatedNews, imageFile);
+            return ResponseEntity.ok("News updated successfully");
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body("Error updating news: " + e.getMessage());
+        }
+    }
+    
+    @DeleteMapping("/{newsId}")
+    public ResponseEntity<String> deleteNews(@PathVariable String newsId) {
+        try {
+            newsService.deleteNews(newsId);
+            return ResponseEntity.ok("News deleted successfully");
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body("Error deleting news: " + e.getMessage());
+        }
+    }
+
 }

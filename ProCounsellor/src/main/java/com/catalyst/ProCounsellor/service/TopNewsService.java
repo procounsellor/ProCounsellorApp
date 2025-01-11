@@ -4,6 +4,7 @@ import com.catalyst.ProCounsellor.model.TopNews;
 import com.google.auth.oauth2.ServiceAccountCredentials;
 import com.google.cloud.Timestamp;
 import com.google.cloud.firestore.CollectionReference;
+import com.google.cloud.firestore.DocumentReference;
 import com.google.cloud.firestore.Firestore;
 import com.google.cloud.firestore.QueryDocumentSnapshot;
 import com.google.cloud.firestore.QuerySnapshot;
@@ -14,13 +15,17 @@ import com.google.cloud.storage.BlobInfo;
 import com.google.cloud.storage.Storage;
 import com.google.cloud.storage.StorageOptions;
 import com.google.firebase.cloud.FirestoreClient;
+import com.google.firebase.cloud.StorageClient;
+
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
@@ -108,4 +113,32 @@ public class TopNewsService {
 
 	    return photoUrl; 
 	}
+    
+    public void updateNewsWithImage(String newsId, TopNews updatedNews, MultipartFile imageFile)
+            throws ExecutionException, InterruptedException, IOException {
+        Firestore firestore = FirestoreClient.getFirestore();
+        DocumentReference docRef = firestore.collection(COLLECTION_NAME).document(newsId);
+
+        Map<String, Object> updates = new HashMap<>();
+        
+        if(updatedNews!=null) {
+	        if (updatedNews.getDescriptionParagraph() != null) {
+	            updates.put("descriptionParagraph", updatedNews.getDescriptionParagraph());
+	        }
+	        if (updatedNews.getFullNews() != null) {
+	            updates.put("fullNews", updatedNews.getFullNews());
+	        }
+	       }
+        
+        if (imageFile != null && !imageFile.isEmpty()) {
+        	String imageUrl = uploadImage(imageFile, newsId);
+            updates.put("imageUrl", imageUrl);
+        }
+        docRef.update(updates).get();
+    }
+    
+    public void deleteNews(String newsId) throws ExecutionException, InterruptedException {
+        Firestore firestore = FirestoreClient.getFirestore();
+        firestore.collection(COLLECTION_NAME).document(newsId).delete().get();
+    }
 }
