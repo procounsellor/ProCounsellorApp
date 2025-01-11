@@ -56,7 +56,7 @@ public class UserService {
         // Create new user object
         User user = new User();
         user.setPhoneNumber(phoneNumber);
-        user.setUserName(phoneNumber); // Use phone number as userName
+        user.setUserName(phoneNumber.replaceFirst("^\\+\\d{2}", ""));
         user.setRole("user");
 
         // Save new user

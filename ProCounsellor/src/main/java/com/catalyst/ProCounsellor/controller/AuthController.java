@@ -17,9 +17,6 @@ import com.catalyst.ProCounsellor.service.OTPService;
 import com.catalyst.ProCounsellor.service.UserService;
 
 import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.SignatureAlgorithm;
-
-import java.util.Base64;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
@@ -116,6 +113,7 @@ public class AuthController {
     
     @PostMapping("/generateOtp")
     public ResponseEntity<String> generateOtp(@RequestParam String phoneNumber) {
+    	phoneNumber=phoneNumber.replace(" ", "+");
         if (phoneNumber == null || phoneNumber.isEmpty()) {
             return ResponseEntity.badRequest().body("Phone number is mandatory and cannot be null or empty.");
         }
@@ -138,13 +136,16 @@ public class AuthController {
         String responseMessage;
         HttpStatus responseStatus;
         String jwtToken = null;
-
-        if (userService.isPhoneNumberExists(phoneNumber)) {
+        String userId;
+        
+		if (userService.isPhoneNumberExists(phoneNumber)) {
             responseMessage = "Phone number already exists. User logged in successfully.";
-            responseStatus = HttpStatus.OK; // Existing user
+            responseStatus = HttpStatus.OK;
+            userId = userService.getUserNameFromPhoneNumber(phoneNumber);
         } else {
             responseMessage = userService.newSignup(phoneNumber);
             responseStatus = responseMessage.startsWith("Signup successful") ? HttpStatus.CREATED : HttpStatus.BAD_REQUEST; // New signup
+            userId = userService.getUserNameFromPhoneNumber(phoneNumber);
         }
 
         if (responseStatus != HttpStatus.BAD_REQUEST) {
@@ -160,22 +161,22 @@ public class AuthController {
 
         return ResponseEntity.status(responseStatus).body(Map.of(
                 "message", responseMessage,
-                "jwtToken", jwtToken));
+                "jwtToken", jwtToken,
+                "userId", userId));
     }
 
     
     @GetMapping("/isUserDetailsNull")
-    public ResponseEntity<Boolean> isUserDetailsNull(@RequestParam String phoneNumber) throws ExecutionException, InterruptedException {
-    	phoneNumber = phoneNumber.replace(" ", "+");
-        if (phoneNumber == null || phoneNumber.isEmpty()) {
+    public ResponseEntity<Boolean> isUserDetailsNull(@RequestParam String userId) throws ExecutionException, InterruptedException {
+        if (userId == null || userId.isEmpty()) {
             return ResponseEntity.badRequest().body(false);
         }
 
         // Fetch the user details
-        User user = userService.getUserById(phoneNumber);
+        User user = userService.getUserById(userId);
         if (user == null) {
         	System.out.println("nulllll");
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(true); // Assume details are null if user doesn't exist
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(true);
         }
 
         // Check if both fields are null
