@@ -17,6 +17,7 @@ import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.database.ValueEventListener;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -38,11 +39,11 @@ public class CounsellorService {
     // Signup functionality
     public String signup(Counsellor counsellor) throws ExecutionException, InterruptedException {
         Firestore dbFirestore = FirestoreClient.getFirestore();
+        
+        counsellor.setUserName(counsellor.getPhoneNumber().replaceFirst("^\\+\\d{2}", ""));
+        counsellor.setRole("counsellor");
 
         // Validate mandatory fields
-        if (counsellor.getUserName() == null || counsellor.getUserName().isEmpty()) {
-            return "UserName is mandatory and cannot be null or empty.";
-        }
         if (counsellor.getFirstName() == null || counsellor.getFirstName().isEmpty()) {
             return "First name is mandatory and cannot be null or empty.";
         }
@@ -93,20 +94,17 @@ public class CounsellorService {
 
 
     // Signin functionality
-    public String signin(String identifier, String password) throws ExecutionException, InterruptedException {
+    public HttpStatus signin(String identifier, String password) throws ExecutionException, InterruptedException {
         Firestore dbFirestore = FirestoreClient.getFirestore();
         CollectionReference counsellorsCollection = dbFirestore.collection(COUNSELLORS);
 
         // Determine the identifier type and query the Firestore
         Query query;
         if (identifier.contains("@")) {
-            // If it contains '@', treat it as email
             query = counsellorsCollection.whereEqualTo("email", identifier);
-        } else if (identifier.matches("\\d+")) {
-            // If it's numeric, treat it as phone number
+        } else if (identifier.contains("+91")) {
             query = counsellorsCollection.whereEqualTo("phoneNumber", identifier);
         } else {
-            // Otherwise, treat it as userName (DocumentId)
             DocumentReference docRef = counsellorsCollection.document(identifier);
 
             // Check if the document exists
@@ -116,7 +114,7 @@ public class CounsellorService {
 
                 // Validate the password
                 if (existingCounsellor.getPassword().equals(password)) {
-                    return "Signin successful for Counsellor ID: " + identifier;
+                    return HttpStatus.OK;
                 } else {
                     throw new InvalidCredentialsException("Invalid credentials provided.");
                 }
@@ -129,14 +127,11 @@ public class CounsellorService {
         List<QueryDocumentSnapshot> documents = query.get().get().getDocuments();
 
         if (!documents.isEmpty()) {
-            // Fetch the first matching document
             QueryDocumentSnapshot document = documents.get(0);
             Counsellor existingCounsellor = document.toObject(Counsellor.class);
 
-            // Validate the password
             if (existingCounsellor.getPassword().equals(password)) {
-                String userName = document.getId(); // Get the DocumentId as userName
-                return "Signin successful for Counsellor ID: " + userName;
+                return HttpStatus.OK;
             } else {
                 throw new InvalidCredentialsException("Invalid credentials provided.");
             }
@@ -395,38 +390,28 @@ public class CounsellorService {
 		    // Return the result after the callback completes
 		    return isOnline[0];
 		}
-	 
-	 public String getUserNameFromEmail(String email) throws ExecutionException, InterruptedException {
+
+	 public String getCounsellorId(String identifier) throws InterruptedException, ExecutionException {
 		    Firestore dbFirestore = FirestoreClient.getFirestore();
 		    CollectionReference counsellorsCollection = dbFirestore.collection(COUNSELLORS);
+		    Query query;
 
-		    // Query to find counsellor by email
-		    Query query = counsellorsCollection.whereEqualTo("email", email);
+		    if (identifier.matches("^.+@.+\\..+$")) {
+		        query = counsellorsCollection.whereEqualTo("email", identifier).limit(1);
+		    } else if (identifier.matches("^\\+91\\d{10}$")) {
+		        query = counsellorsCollection.whereEqualTo("phoneNumber", identifier).limit(1);
+		    } else {
+		        throw new IllegalArgumentException("Invalid identifier format: " + identifier);
+		    }
+
 		    List<QueryDocumentSnapshot> documents = query.get().get().getDocuments();
 
 		    if (!documents.isEmpty()) {
 		        Counsellor counsellor = documents.get(0).toObject(Counsellor.class);
 		        return counsellor.getUserName();
-		    } else {
-		        throw new UserNotFoundException("No counsellor found with email: " + email);
 		    }
+
+		    throw new UserNotFoundException("No counsellor found for identifier: " + identifier);
 		}
-
-		public String getUserNameFromPhoneNumber(String phoneNumber) throws ExecutionException, InterruptedException {
-		    Firestore dbFirestore = FirestoreClient.getFirestore();
-		    CollectionReference counsellorsCollection = dbFirestore.collection(COUNSELLORS);
-
-		    // Query to find counsellor by phone number
-		    Query query = counsellorsCollection.whereEqualTo("phoneNumber", phoneNumber);
-		    List<QueryDocumentSnapshot> documents = query.get().get().getDocuments();
-
-		    if (!documents.isEmpty()) {
-		        Counsellor counsellor = documents.get(0).toObject(Counsellor.class);
-		        return counsellor.getUserName();
-		    } else {
-		        throw new UserNotFoundException("No counsellor found with phone number: " + phoneNumber);
-		    }
-		}
-
 
 }

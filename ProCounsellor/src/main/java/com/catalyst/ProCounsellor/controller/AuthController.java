@@ -40,26 +40,26 @@ public class AuthController {
     @Autowired
     private OTPService otpService;
 
-    @PostMapping("/userSignup")
-    public ResponseEntity<Map<String, Object>> userSignup(@RequestBody User user) throws ExecutionException, InterruptedException {
-        String message = userService.signup(user);
-        HttpStatus status = message.startsWith("Signup successful") ? HttpStatus.CREATED : HttpStatus.BAD_REQUEST;
-        return buildResponse(message, status);
-    }
-
-    @PostMapping("/userSignin")
-    public ResponseEntity<Map<String, Object>> userSignin(@RequestParam String identifier, @RequestParam String password) throws ExecutionException, InterruptedException {
-        try {
-            String message = userService.signin(identifier, password);
-            return buildResponse(message, HttpStatus.OK);
-        } catch (UserNotFoundException e) {
-            return buildResponse(e.getMessage(), HttpStatus.NOT_FOUND);
-        } catch (InvalidCredentialsException e) {
-            return buildResponse(e.getMessage(), HttpStatus.UNAUTHORIZED);
-        } catch (IllegalArgumentException e) {
-            return buildResponse(e.getMessage(), HttpStatus.BAD_REQUEST);
-        }
-    }
+//    @PostMapping("/userSignup")
+//    public ResponseEntity<Map<String, Object>> userSignup(@RequestBody User user) throws ExecutionException, InterruptedException {
+//        String message = userService.signup(user);
+//        HttpStatus status = message.startsWith("Signup successful") ? HttpStatus.CREATED : HttpStatus.BAD_REQUEST;
+//        return buildResponse(message, status);
+//    }
+//
+//    @PostMapping("/userSignin")
+//    public ResponseEntity<Map<String, Object>> userSignin(@RequestParam String identifier, @RequestParam String password) throws ExecutionException, InterruptedException {
+//        try {
+//            String message = userService.signin(identifier, password);
+//            return buildResponse(message, HttpStatus.OK);
+//        } catch (UserNotFoundException e) {
+//            return buildResponse(e.getMessage(), HttpStatus.NOT_FOUND);
+//        } catch (InvalidCredentialsException e) {
+//            return buildResponse(e.getMessage(), HttpStatus.UNAUTHORIZED);
+//        } catch (IllegalArgumentException e) {
+//            return buildResponse(e.getMessage(), HttpStatus.BAD_REQUEST);
+//        }
+//    }
 
 
     @PostMapping("/counsellorSignup")
@@ -73,10 +73,29 @@ public class AuthController {
     }
 
     @PostMapping("/counsellorSignin")
-    public ResponseEntity<Map<String, Object>> counsellorSignin(@RequestParam String identifier, @RequestParam String password) throws ExecutionException, InterruptedException {
+    public ResponseEntity<Map<String, Object>> counsellorSignin(@RequestParam String identifier, @RequestParam String password) throws ExecutionException, InterruptedException, FirebaseAuthException {
         try {
-            String message = counsellorService.signin(identifier, password);
-            return buildResponse(message, HttpStatus.OK);
+            HttpStatus status = counsellorService.signin(identifier, password);
+            String jwtToken = null;
+            String userId = counsellorService.getCounsellorId(identifier);
+            String firebaseCustomToken = null;
+            
+            if (status == HttpStatus.OK) {
+            	firebaseCustomToken = FirebaseAuth.getInstance().createCustomToken(userId);
+                // Generate JWT Token using the centralized key
+                jwtToken = Jwts.builder()
+                        .setSubject(userId)
+                        .setIssuedAt(new Date())
+                        .setExpiration(new Date(System.currentTimeMillis() + 86400000 * 365))
+                        .signWith(JwtKeyProvider.getSigningKey())
+                        .compact();
+            }
+
+            return ResponseEntity.status(status).body(Map.of(
+                    "firebaseCustomToken", firebaseCustomToken,
+                    "jwtToken", jwtToken,
+                    "userId", userId));
+            
         } catch (UserNotFoundException e) {
             return buildResponse(e.getMessage(), HttpStatus.NOT_FOUND);
         } catch (InvalidCredentialsException e) {
@@ -124,7 +143,7 @@ public class AuthController {
     }
     
     @PostMapping("/verifyAndUserSignup")
-    public ResponseEntity<Map<String, Object>> verifyAndSignup(
+    public ResponseEntity<Map<String, Object>> verifyAndSignupOrSignin(
             @RequestParam String phoneNumber, @RequestParam String otp) throws ExecutionException, InterruptedException, FirebaseAuthException {
 
         if (phoneNumber == null || phoneNumber.isEmpty()) {
@@ -148,6 +167,15 @@ public class AuthController {
         } else {
             responseMessage = userService.newSignup(phoneNumber);
             responseStatus = responseMessage.startsWith("Signup successful") ? HttpStatus.CREATED : HttpStatus.BAD_REQUEST; // New signup
+
+            try {
+                Thread.sleep(1000); // Sleep for 1 second
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt(); // Restore interrupted status
+                throw new RuntimeException("Thread was interrupted while waiting", e);
+            }
+
+            // Fetch userId after delay
             userId = userService.getUserNameFromPhoneNumber(phoneNumber);
         }
 

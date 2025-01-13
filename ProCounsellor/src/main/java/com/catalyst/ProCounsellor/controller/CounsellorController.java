@@ -172,24 +172,4 @@ public class CounsellorController {
             return false;
         }
     }
-    
-    @GetMapping("/getCounsellorUserNameFromEmail")
-    public String getCounsellorUserNameFromEmail(@RequestParam String email) throws ExecutionException, InterruptedException {
-        try {
-            String counsellorName = counsellorService.getUserNameFromEmail(email);
-            return counsellorName;
-        } catch (UserNotFoundException e) {
-        	return "Cannot find Counsellor ID";
-        }
-    }
-
-    @GetMapping("/getCounsellorUserNameFromPhoneNumber")
-    public String getCounsellorUserNameFromPhoneNumber(@RequestParam String phoneNumber) throws ExecutionException, InterruptedException {
-        try {
-            String counsellorName = counsellorService.getUserNameFromPhoneNumber(phoneNumber);
-            return counsellorName;
-        } catch (UserNotFoundException e) {
-            return "Cannot find Counsellor ID";
-        }
-    }
 }
