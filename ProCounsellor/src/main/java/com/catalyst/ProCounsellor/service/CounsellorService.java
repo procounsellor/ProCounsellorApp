@@ -30,8 +30,8 @@ import java.util.concurrent.ExecutionException;
 public class CounsellorService {
 	
 	@Autowired
-	private FirebaseService firebaseService;
-
+	private SharedService sharedService;
+	
     private static final String COUNSELLORS = "counsellors";
     
     Firestore firestore = FirestoreClient.getFirestore();
@@ -213,7 +213,7 @@ public class CounsellorService {
 
         // Fetch the counsellor objects synchronously for each online counsellor
         for (String counsellorName : onlineCounsellorNames) {
-            Counsellor counsellor = firebaseService.getCounsellorById(counsellorName);
+            Counsellor counsellor = getCounsellorById(counsellorName);
             if (counsellor != null) {
                 onlineCounsellorsList.add(counsellor);
             }
@@ -229,11 +229,11 @@ public class CounsellorService {
     
     public List<User> getSubscribedClients(String counsellorId) {
         try {
-            Counsellor counsellor = firebaseService.getCounsellorById(counsellorId);
+            Counsellor counsellor = getCounsellorById(counsellorId);
             if (counsellor != null && counsellor.getClientIds() != null) {
                 List<User> subscribedClients = new ArrayList<>();
                 for (String userId : counsellor.getClientIds()) {
-                    User user = firebaseService.getUserById(userId);
+                    User user = sharedService.getUserById(userId);
                     if (user != null) {
                         subscribedClients.add(user);
                     }
@@ -248,11 +248,11 @@ public class CounsellorService {
 
 	public List<User> getFollowers(String counsellorId) {
 		try {
-            Counsellor counsellor = firebaseService.getCounsellorById(counsellorId);
+            Counsellor counsellor = getCounsellorById(counsellorId);
             if (counsellor != null && counsellor.getFollowerIds() != null) {
                 List<User> followers = new ArrayList<>();
                 for (String userId : counsellor.getFollowerIds()) {
-                    User user = firebaseService.getUserById(userId);
+                    User user = sharedService.getUserById(userId);
                     if (user != null) {
                     	followers.add(user);
                     }
@@ -267,7 +267,7 @@ public class CounsellorService {
 	
 	public boolean hasClient(String counsellorId, String userId) {
 	    try {
-	        Counsellor counsellor = firebaseService.getCounsellorById(counsellorId); // Retrieve the counsellor
+	        Counsellor counsellor = getCounsellorById(counsellorId); // Retrieve the counsellor
 	        if (counsellor != null && counsellor.getClientIds() != null) {
 	            return counsellor.getClientIds().contains(userId); // Check if userId exists in client list
 	        }
@@ -279,7 +279,7 @@ public class CounsellorService {
 
 	public boolean hasFollower(String counsellorId, String userId) {
 		   try {
-		        Counsellor counsellor = firebaseService.getCounsellorById(counsellorId); // Retrieve the counsellor
+		        Counsellor counsellor = getCounsellorById(counsellorId); // Retrieve the counsellor
 		        if (counsellor != null && counsellor.getFollowerIds() != null) {
 		            return counsellor.getFollowerIds().contains(userId); // Check if userId exists in fs list
 		        }
@@ -413,5 +413,9 @@ public class CounsellorService {
 
 		    throw new UserNotFoundException("No counsellor found for identifier: " + identifier);
 		}
-
+	 
+	 public Counsellor getCounsellorById(String counsellorId) throws ExecutionException, InterruptedException {
+	        DocumentSnapshot snapshot = firestore.collection("counsellors").document(counsellorId).get().get();
+	        return snapshot.exists() ? snapshot.toObject(Counsellor.class) : null;
+	    }
 }

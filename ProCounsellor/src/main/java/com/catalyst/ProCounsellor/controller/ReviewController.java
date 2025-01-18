@@ -15,6 +15,8 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.catalyst.ProCounsellor.dto.SendCounsellorReviews;
+import com.catalyst.ProCounsellor.dto.SendUserReviews;
 import com.catalyst.ProCounsellor.model.UserReview;
 import com.catalyst.ProCounsellor.model.UserReviewComments;
 import com.catalyst.ProCounsellor.service.ReviewService;
@@ -67,13 +69,13 @@ public class ReviewController {
     
     // Get all reviews given by a user
     @GetMapping("/user/{userName}")
-    public ResponseEntity<List<UserReview>> getUserReviews(@PathVariable String userName) throws InterruptedException, ExecutionException {
+    public ResponseEntity<List<SendUserReviews>> getUserReviews(@PathVariable String userName) throws InterruptedException, ExecutionException {
         return ResponseEntity.ok(reviewService.getReviewsByUser(userName));
     }
 
     // Get all reviews received by a counselor
     @GetMapping("/counsellor/{counsellorName}")
-    public ResponseEntity<List<UserReview>> getCounsellorReviews(@PathVariable String counsellorName) throws InterruptedException, ExecutionException {
+    public ResponseEntity<List<SendCounsellorReviews>> getCounsellorReviews(@PathVariable String counsellorName) throws InterruptedException, ExecutionException {
         return ResponseEntity.ok(reviewService.getReviewsForCounsellor(counsellorName));
     }
 

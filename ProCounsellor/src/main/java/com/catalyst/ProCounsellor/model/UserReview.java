@@ -11,7 +11,6 @@ import lombok.Data;
 public class UserReview {
 	private String reviewId;
     private String userName;
-    private String photoUrl;
     private String counsellorName; 
     private String reviewText;
     private List<String> userIdsLiked = new ArrayList<>(); 

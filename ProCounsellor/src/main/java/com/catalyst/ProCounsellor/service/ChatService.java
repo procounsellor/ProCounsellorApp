@@ -31,7 +31,10 @@ public class ChatService {
     private FirebaseDatabase firebaseDatabase; // This is for Realtime Database
     
     @Autowired
-    private FirebaseService firebaseService;
+	private UserService userService;
+    
+    @Autowired
+	private CounsellorService counsellorService;
 
     public String startChat(String userId, String counsellorId) throws ExecutionException, InterruptedException {
         // Step 1: Validate userId exists in the users table (Firestore)
@@ -159,7 +162,7 @@ public class ChatService {
         List<Counsellor> counsellors = new ArrayList<>();
         for (QueryDocumentSnapshot document : querySnapshot.getDocuments()) {
             // Extract counsellorId from each chat document
-        	Counsellor counsellor = firebaseService.getCounsellorById(document.getString("counsellorId"));
+        	Counsellor counsellor = counsellorService.getCounsellorById(document.getString("counsellorId"));
             if (counsellor != null) {
             	counsellors.add(counsellor);
             }
@@ -176,7 +179,7 @@ public class ChatService {
         List<User> users = new ArrayList<>();
         for (QueryDocumentSnapshot document : querySnapshot.getDocuments()) {
             // Extract userId from each chat document
-            User user = firebaseService.getUserById(document.getString("userId"));
+            User user = userService.getUserById(document.getString("userId"));
             if (user != null) {
                 users.add(user);
             }
