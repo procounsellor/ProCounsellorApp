@@ -1,7 +1,6 @@
 package com.catalyst.ProCounsellor.controller;
 
 import java.io.IOException;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
@@ -25,7 +24,6 @@ import com.catalyst.ProCounsellor.model.AllowedStates;
 import com.catalyst.ProCounsellor.model.Counsellor;
 import com.catalyst.ProCounsellor.model.Courses;
 import com.catalyst.ProCounsellor.model.User;
-import com.catalyst.ProCounsellor.service.FirebaseService;
 import com.catalyst.ProCounsellor.service.PhotoService;
 import com.catalyst.ProCounsellor.service.UserService;
 import com.google.api.gax.rpc.NotFoundException;
@@ -38,13 +36,11 @@ public class UserController {
     private UserService userService;
 	
 	@Autowired
-	private FirebaseService firebaseService;
-	@Autowired
 	private PhotoService photoService;
 	
 	@GetMapping("/{userId}")
 	public User getUserById(@PathVariable String userId) throws ExecutionException, InterruptedException {	
-		return firebaseService.getUserById(userId);
+		return userService.getUserById(userId);
 	}
 
 	@PostMapping("/{userId}/subscribe/{counsellorId}")
@@ -267,7 +263,7 @@ public class UserController {
 	    @GetMapping("/{userName}/counsellorsAccordingToInterestedCourse/all")
 	    public ResponseEntity<List<Counsellor>> getCounsellorsByUserInterest(@PathVariable String userName) {
 	        try {
-	            User user = firebaseService.getUserById(userName);
+	            User user = userService.getUserById(userName);
 	            Courses interestedCourse = user.getInterestedCourse();
 	            List<Counsellor> matchingCounsellors = userService.getCounsellorsByCourse(interestedCourse);
 	            
@@ -285,7 +281,7 @@ public class UserController {
 	    @GetMapping("/{userName}/counsellorsAccordingToInterestedCourse/karnataka")
 	    public ResponseEntity<List<Counsellor>> getCounsellorsInKarnataka(@PathVariable String userName) {
 	        try {
-	            User user = firebaseService.getUserById(userName);
+	            User user = userService.getUserById(userName);
 	            Courses interestedCourse = user.getInterestedCourse();
 	            List<Counsellor> counsellors = userService
 	                    .getCounsellorsByCourseAndState(interestedCourse, AllowedStates.KARNATAKA);
@@ -304,7 +300,7 @@ public class UserController {
 	    @GetMapping("/{userName}/counsellorsAccordingToInterestedCourse/maharashtra")
 	    public ResponseEntity<List<Counsellor>> getCounsellorsInMaharashtra(@PathVariable String userName) {
 	        try {
-	            User user = firebaseService.getUserById(userName);
+	            User user = userService.getUserById(userName);
 	            Courses interestedCourse = user.getInterestedCourse();
 	            List<Counsellor> counsellors = userService
 	                    .getCounsellorsByCourseAndState(interestedCourse, AllowedStates.MAHARASHTRA);
@@ -323,7 +319,7 @@ public class UserController {
 	    @GetMapping("/{userName}/counsellorsAccordingToInterestedCourse/tamilnadu")
 	    public ResponseEntity<List<Counsellor>> getCounsellorsInTamilNadu(@PathVariable String userName) {
 	        try {
-	            User user = firebaseService.getUserById(userName);
+	            User user = userService.getUserById(userName);
 	            Courses interestedCourse = user.getInterestedCourse();
 	            List<Counsellor> counsellors = userService
 	                    .getCounsellorsByCourseAndState(interestedCourse, AllowedStates.TAMILNADU);

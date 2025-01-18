@@ -24,7 +24,6 @@ import com.catalyst.ProCounsellor.model.Counsellor;
 import com.catalyst.ProCounsellor.model.StateType;
 import com.catalyst.ProCounsellor.model.User;
 import com.catalyst.ProCounsellor.service.CounsellorService;
-import com.catalyst.ProCounsellor.service.FirebaseService;
 import com.catalyst.ProCounsellor.service.PhotoService;
 
 @RestController
@@ -36,9 +35,6 @@ public class CounsellorController {
 	
 	@Autowired
 	private PhotoService photoService;
-	
-	@Autowired
-	private FirebaseService firebaseService;
 	
 	@GetMapping("/all-counsellors")
     public List<Counsellor> getAllCounsellors() {
@@ -104,7 +100,7 @@ public class CounsellorController {
 	
 	@GetMapping("/{counsellorId}")
 	public Counsellor getCounsellorById(@PathVariable String counsellorId) throws ExecutionException, InterruptedException {	
-		return firebaseService.getCounsellorById(counsellorId);
+		return counsellorService.getCounsellorById(counsellorId);
 	}
 	
 	@GetMapping("/{counsellorId}/has-client/{userId}")

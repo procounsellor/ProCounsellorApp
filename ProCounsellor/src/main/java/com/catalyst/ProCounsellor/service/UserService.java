@@ -35,7 +35,7 @@ import java.util.stream.Collectors;
 public class UserService {
 	
 	@Autowired
-	private FirebaseService firebaseService;
+	private SharedService sharedService;
 	
 	Firestore firestore = FirestoreClient.getFirestore();
 	
@@ -186,8 +186,8 @@ public class UserService {
     public boolean subscribeToCounsellor(String userId, String counsellorId) {
         try {
             // Retrieve the user and counsellor from Firebase
-            User user = firebaseService.getUserById(userId);
-            Counsellor counsellor = firebaseService.getCounsellorById(counsellorId);
+            User user = getUserById(userId);
+            Counsellor counsellor = sharedService.getCounsellorById(counsellorId);
 
             if (user == null || counsellor == null) {
                 return false; // User or Counsellor not found
@@ -214,8 +214,8 @@ public class UserService {
             }
 
             // Update both entities in Firebase
-            firebaseService.updateUser(user);
-            firebaseService.updateCounsellor(counsellor);
+            updateUser(user);
+            sharedService.updateCounsellor(counsellor);
 
             return true;
         } catch (Exception e) {
@@ -226,11 +226,11 @@ public class UserService {
     
     public List<Counsellor> getSubscribedCounsellors(String userId) {
         try {
-            User user = firebaseService.getUserById(userId);
+            User user = getUserById(userId);
             if (user != null && user.getSubscribedCounsellorIds() != null) {
                 List<Counsellor> subscribedCounsellors = new ArrayList<>();
                 for (String counsellorId : user.getSubscribedCounsellorIds()) {
-                    Counsellor counsellor = firebaseService.getCounsellorById(counsellorId);
+                    Counsellor counsellor = sharedService.getCounsellorById(counsellorId);
                     if (counsellor != null) {
                         subscribedCounsellors.add(counsellor);
                     }
@@ -245,11 +245,11 @@ public class UserService {
 
 	public List<Counsellor> getFollowedCounsellors(String userId) {
 		try {
-            User user = firebaseService.getUserById(userId);
+            User user = getUserById(userId);
             if (user != null && user.getFollowedCounsellorsIds() != null) {
                 List<Counsellor> followedCounsellors = new ArrayList<>();
                 for (String counsellorId : user.getFollowedCounsellorsIds()) {
-                    Counsellor counsellor = firebaseService.getCounsellorById(counsellorId);
+                    Counsellor counsellor = sharedService.getCounsellorById(counsellorId);
                     if (counsellor != null) {
                     	followedCounsellors.add(counsellor);
                     }
@@ -265,8 +265,8 @@ public class UserService {
 	public boolean followCounsellor(String userId, String counsellorId) {
 		try {
             // Retrieve the user and counsellor from Firebase
-            User user = firebaseService.getUserById(userId);
-            Counsellor counsellor = firebaseService.getCounsellorById(counsellorId);
+            User user = getUserById(userId);
+            Counsellor counsellor = sharedService.getCounsellorById(counsellorId);
 
             if (user == null || counsellor == null) {
                 return false; // User or Counsellor not found
@@ -293,8 +293,8 @@ public class UserService {
             }
 
             // Update both entities in Firebase
-            firebaseService.updateUser(user);
-            firebaseService.updateCounsellor(counsellor);
+            updateUser(user);
+            sharedService.updateCounsellor(counsellor);
 
             return true;
         } catch (Exception e) {
@@ -305,7 +305,7 @@ public class UserService {
 	
 	public boolean isSubscribedToCounsellor(String userId, String counsellorId) {
 	    try {
-	        User user = firebaseService.getUserById(userId); // Retrieve the user
+	        User user = getUserById(userId); // Retrieve the user
 	        if (user != null && user.getSubscribedCounsellorIds() != null) {
 	            return user.getSubscribedCounsellorIds().contains(counsellorId); // Check if counsellorId exists in subscribed list
 	        }
@@ -317,7 +317,7 @@ public class UserService {
 
 	public boolean hasFollowedCounsellor(String userId, String counsellorId) {
 		try {
-	        User user = firebaseService.getUserById(userId); // Retrieve the user
+	        User user = getUserById(userId); // Retrieve the user
 	        if (user != null && user.getFollowedCounsellorsIds() != null) {
 	            return user.getFollowedCounsellorsIds().contains(counsellorId); // Check if counsellorId exists in followed list
 	        }
@@ -330,8 +330,8 @@ public class UserService {
 	public boolean unsubscribeCounsellor(String userId, String counsellorId) {
 	    try {
 	        // Fetch user and counsellor
-	        User user = firebaseService.getUserById(userId);
-	        Counsellor counsellor = firebaseService.getCounsellorById(counsellorId);
+	        User user = getUserById(userId);
+	        Counsellor counsellor = sharedService.getCounsellorById(counsellorId);
 
 	        if (user == null || counsellor == null) {
 	            return false; // Return false if user or counsellor doesn't exist
@@ -348,8 +348,8 @@ public class UserService {
 	        }
 
 	        // Update both entities in Firebase
-	        firebaseService.updateUser(user);
-	        firebaseService.updateCounsellor(counsellor);
+	        updateUser(user);
+	        sharedService.updateCounsellor(counsellor);
 
 	        return true;
 	    } catch (Exception e) {
@@ -358,11 +358,15 @@ public class UserService {
 	    }
 	}
 	
+	public void updateUser(User user) throws ExecutionException, InterruptedException {
+        firestore.collection("users").document(user.getUserName()).set(user).get();
+    }
+	
 	public boolean unfollowCounsellor(String userId, String counsellorId) {
 	    try {
 	        // Fetch user and counsellor
-	        User user = firebaseService.getUserById(userId);
-	        Counsellor counsellor = firebaseService.getCounsellorById(counsellorId);
+	        User user = getUserById(userId);
+	        Counsellor counsellor = sharedService.getCounsellorById(counsellorId);
 
 	        if (user == null || counsellor == null) {
 	            return false; // Return false if user or counsellor doesn't exist
@@ -379,8 +383,8 @@ public class UserService {
 	        }
 
 	        // Update both entities in Firebase
-	        firebaseService.updateUser(user);
-	        firebaseService.updateCounsellor(counsellor);
+	        updateUser(user);
+	        sharedService.updateCounsellor(counsellor);
 
 	        return true;
 	    } catch (Exception e) {
@@ -562,8 +566,7 @@ public class UserService {
 	    }
 	    
 	    public User getUserById(String userId) throws ExecutionException, InterruptedException {
-	        DocumentSnapshot snapshot = firestore.collection(USERS).document(userId).get().get();
+	        DocumentSnapshot snapshot = firestore.collection("users").document(userId).get().get();
 	        return snapshot.exists() ? snapshot.toObject(User.class) : null;
 	    }
-
 }
