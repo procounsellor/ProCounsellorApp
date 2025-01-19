@@ -21,14 +21,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
-import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
 @Service
@@ -569,4 +565,20 @@ public class UserService {
 	        DocumentSnapshot snapshot = firestore.collection("users").document(userId).get().get();
 	        return snapshot.exists() ? snapshot.toObject(User.class) : null;
 	    }
+
+		public List<User> getAllUsers() {
+	        Firestore firestore = FirestoreClient.getFirestore();
+	        ApiFuture<QuerySnapshot> querySnapshot = firestore.collection(USERS).get();
+
+	        List<User> users = new ArrayList<>();
+	        try {
+	            for (QueryDocumentSnapshot doc : querySnapshot.get().getDocuments()) {
+	            	User user = doc.toObject(User.class);
+	            	users.add(user);
+	            }
+	        } catch (InterruptedException | ExecutionException e) {
+	            throw new RuntimeException("Error fetching all counsellors", e);
+	        }
+	        return users;
+		}
 }

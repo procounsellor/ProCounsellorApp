@@ -35,7 +35,7 @@ public class AuthController {
     private CounsellorService counsellorService;
     
     @Autowired
-    private AdminService adminAuthService;
+    private AdminService adminService;
     
     @Autowired
     private OTPService otpService;
@@ -109,19 +109,40 @@ public class AuthController {
 
     @PostMapping("/adminSignup")
     public ResponseEntity<Map<String, Object>> adminSignup(@RequestBody Admin admin) throws ExecutionException, InterruptedException {
-        String message = adminAuthService.signup(admin);
+        String message = adminService.signup(admin);
         return buildResponse(message, HttpStatus.CREATED);
     }
 
     @PostMapping("/adminSignin")
-    public ResponseEntity<Map<String, Object>> adminSignin(@RequestBody Admin admin) throws ExecutionException, InterruptedException {
-        try {
-        	String message = adminAuthService.signin(admin);
-            return buildResponse(message, HttpStatus.OK);
+    public ResponseEntity<Map<String, Object>> adminSignin(@RequestParam String identifier, @RequestParam String password) throws ExecutionException, InterruptedException, FirebaseAuthException {
+    	try {
+            HttpStatus status = adminService.signin(identifier, password);
+            String jwtToken = null;
+            String userId = adminService.getAdminId(identifier);
+            String firebaseCustomToken = null;
+            
+            if (status == HttpStatus.OK) {
+            	firebaseCustomToken = FirebaseAuth.getInstance().createCustomToken(userId);
+                // Generate JWT Token using the centralized key
+                jwtToken = Jwts.builder()
+                        .setSubject(userId)
+                        .setIssuedAt(new Date())
+                        .setExpiration(new Date(System.currentTimeMillis() + 86400000 * 365))
+                        .signWith(JwtKeyProvider.getSigningKey())
+                        .compact();
+            }
+
+            return ResponseEntity.status(status).body(Map.of(
+                    "firebaseCustomToken", firebaseCustomToken,
+                    "jwtToken", jwtToken,
+                    "userId", userId));
+            
         } catch (UserNotFoundException e) {
             return buildResponse(e.getMessage(), HttpStatus.NOT_FOUND);
         } catch (InvalidCredentialsException e) {
             return buildResponse(e.getMessage(), HttpStatus.UNAUTHORIZED);
+        } catch (IllegalArgumentException e) {
+            return buildResponse(e.getMessage(), HttpStatus.BAD_REQUEST);
         }
     }
 
