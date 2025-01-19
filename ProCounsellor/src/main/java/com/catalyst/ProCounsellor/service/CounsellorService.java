@@ -4,9 +4,7 @@ import com.catalyst.ProCounsellor.exception.InvalidCredentialsException;
 import com.catalyst.ProCounsellor.exception.UserNotFoundException;
 import com.catalyst.ProCounsellor.model.Counsellor;
 import com.catalyst.ProCounsellor.model.CounsellorState;
-import com.catalyst.ProCounsellor.model.StateType;
 import com.catalyst.ProCounsellor.model.User;
-import com.catalyst.ProCounsellor.model.UserState;
 import com.google.api.core.ApiFuture;
 import com.google.cloud.firestore.*;
 import com.google.firebase.cloud.FirestoreClient;
@@ -401,7 +399,7 @@ public class CounsellorService {
 		    } else if (identifier.matches("^\\+91\\d{10}$")) {
 		        query = counsellorsCollection.whereEqualTo("phoneNumber", identifier).limit(1);
 		    } else {
-		        throw new IllegalArgumentException("Invalid identifier format: " + identifier);
+		    	return identifier;
 		    }
 
 		    List<QueryDocumentSnapshot> documents = query.get().get().getDocuments();

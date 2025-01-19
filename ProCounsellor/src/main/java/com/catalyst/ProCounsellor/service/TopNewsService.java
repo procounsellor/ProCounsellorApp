@@ -33,7 +33,7 @@ import java.util.concurrent.ExecutionException;
 @Service
 public class TopNewsService {
 
-    private static final String COLLECTION_NAME = "news";
+    private static final String NEWS = "news";
 
     // Add a news item with image upload
     public CompletableFuture<Void> addNewsWithImage(MultipartFile imageFile, TopNews news) {
@@ -57,7 +57,7 @@ public class TopNewsService {
     // Get all news from Firestore
     public List<TopNews> getAllNews() throws ExecutionException, InterruptedException {
         Firestore firestore = FirestoreClient.getFirestore();
-        QuerySnapshot querySnapshot = firestore.collection(COLLECTION_NAME).get().get();
+        QuerySnapshot querySnapshot = firestore.collection(NEWS).get().get();
 
         List<TopNews> newsList = new ArrayList<>();
         for (QueryDocumentSnapshot document : querySnapshot.getDocuments()) {
@@ -72,7 +72,7 @@ public class TopNewsService {
         Firestore firestore = FirestoreClient.getFirestore();
         return CompletableFuture.supplyAsync(() -> {
             try {
-                return firestore.collection(COLLECTION_NAME)
+                return firestore.collection(NEWS)
                         .document(newsId)
                         .get()
                         .get()
@@ -85,7 +85,7 @@ public class TopNewsService {
 
     private void saveNewsToFirestore(TopNews news) {
         Firestore firestore = FirestoreClient.getFirestore();
-        firestore.collection(COLLECTION_NAME).document(news.getNewsId()).set(news);
+        firestore.collection(NEWS).document(news.getNewsId()).set(news);
     }
     
     public String uploadImage(MultipartFile imageFile, String newsId) throws IOException {
@@ -117,7 +117,7 @@ public class TopNewsService {
     public void updateNewsWithImage(String newsId, TopNews updatedNews, MultipartFile imageFile)
             throws ExecutionException, InterruptedException, IOException {
         Firestore firestore = FirestoreClient.getFirestore();
-        DocumentReference docRef = firestore.collection(COLLECTION_NAME).document(newsId);
+        DocumentReference docRef = firestore.collection(NEWS).document(newsId);
 
         Map<String, Object> updates = new HashMap<>();
         
@@ -139,6 +139,6 @@ public class TopNewsService {
     
     public void deleteNews(String newsId) throws ExecutionException, InterruptedException {
         Firestore firestore = FirestoreClient.getFirestore();
-        firestore.collection(COLLECTION_NAME).document(newsId).delete().get();
+        firestore.collection(NEWS).document(newsId).delete().get();
     }
 }

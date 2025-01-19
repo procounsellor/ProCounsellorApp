@@ -38,6 +38,11 @@ public class UserController {
 	@Autowired
 	private PhotoService photoService;
 	
+	@GetMapping("/all-users")
+    public List<User> getAllUsers() {
+        return userService.getAllUsers();
+    }
+	
 	@GetMapping("/{userId}")
 	public User getUserById(@PathVariable String userId) throws ExecutionException, InterruptedException {	
 		return userService.getUserById(userId);
