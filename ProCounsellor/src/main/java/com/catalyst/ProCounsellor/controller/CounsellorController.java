@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -167,5 +168,15 @@ public class CounsellorController {
             System.err.println("Error checking counsellor online status: " + e.getMessage());
             return false;
         }
+    }
+    
+    @PostMapping("/mark-follower-notification-seen")
+    public void markFollowersNotificationAsSeen(@RequestParam String counsellorId, @RequestParam String userId) {
+    	counsellorService.markFollowersNotificationAsSeen(counsellorId, userId);
+    }
+    
+    @PostMapping("/mark-subscriber-notification-seen")
+    public void markSubscribersNotificationAsSeen(@RequestParam String counsellorId, @RequestParam String userId) {
+    	counsellorService.markSubscribersNotificationAsSeen(counsellorId, userId);
     }
 }

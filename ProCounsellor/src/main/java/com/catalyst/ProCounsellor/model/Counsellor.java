@@ -22,7 +22,7 @@ public class Counsellor {
     private String experience;
     private String role;
     private AllowedStates stateOfCounsellor;
-    private Address address;
+    private List<String> chatIdsCreatedForCounsellor;
     private Double ratePerYear;
     private List<Courses> expertise; //align with user's interested course
     private Integer noOfClients;
