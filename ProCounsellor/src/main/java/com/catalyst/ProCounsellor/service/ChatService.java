@@ -71,11 +71,82 @@ public class ChatService {
 
         DocumentReference newChatRef = firestore.collection("chats").document();
         newChatRef.set(chatData).get();
-
+        
+        addChatIdToUser(userDocRef, newChatRef.getId());
+        addChatIdToCounsellor(counsellorDocRef, newChatRef.getId());
+        
         return newChatRef.getId();
     }
 
-    public void sendMessage(String chatId, MessageRequest messageRequest) throws ExecutionException, InterruptedException, IllegalAccessException {
+    private void addChatIdToCounsellor(DocumentReference counsellorDocRef, String newChatId) throws InterruptedException, ExecutionException {
+    	ApiFuture<DocumentSnapshot> future = counsellorDocRef.get();
+        DocumentSnapshot document = future.get();
+        
+        if (document.exists()) {
+            // Retrieve the existing chatIdsCreatedForCounsellor list
+        	List<String> chatIds;
+
+            if (document.exists()) {
+                // Retrieve existing list or initialize if null
+                chatIds = (List<String>) document.get("chatIdsCreatedForCounsellor");
+                if (chatIds == null) {
+                    chatIds = new ArrayList<>();
+                }
+            } else {
+                // If document doesn't exist, initialize list
+                chatIds = new ArrayList<>();
+            }
+            
+            // Add the new chat ID if it does not already exist
+            if (!chatIds.contains(newChatId)) {
+                chatIds.add(newChatId);
+
+                // Update Firestore document with the new list
+                ApiFuture<WriteResult> writeResult = counsellorDocRef.update("chatIdsCreatedForCounsellor", chatIds);
+                writeResult.get();  // Wait for the update to complete
+
+                System.out.println("Chat ID added successfully: " + newChatId);
+            } else {
+                System.out.println("Chat ID already exists: " + newChatId);
+            }
+        }
+	}
+
+	private void addChatIdToUser(DocumentReference userDocRef, String newChatId) throws InterruptedException, ExecutionException {
+		ApiFuture<DocumentSnapshot> future = userDocRef.get();
+        DocumentSnapshot document = future.get();
+        
+        if (document.exists()) {
+            // Retrieve the existing chatIdsCreatedForCounsellor list
+        	List<String> chatIds;
+
+            if (document.exists()) {
+                // Retrieve existing list or initialize if null
+                chatIds = (List<String>) document.get("chatIdsCreatedForUser");
+                if (chatIds == null) {
+                    chatIds = new ArrayList<>();
+                }
+            } else {
+                // If document doesn't exist, initialize list
+                chatIds = new ArrayList<>();
+            }
+
+            // Add the new chat ID if it does not already exist
+            if (!chatIds.contains(newChatId)) {
+                chatIds.add(newChatId);
+
+                // Update Firestore document with the new list
+                ApiFuture<WriteResult> writeResult = userDocRef.update("chatIdsCreatedForUser", chatIds);
+                writeResult.get();  // Wait for the update to complete
+
+                System.out.println("Chat ID added successfully: " + newChatId);
+            } else {
+                System.out.println("Chat ID already exists: " + newChatId);
+            }
+        }
+    }
+
+	public void sendMessage(String chatId, MessageRequest messageRequest) throws ExecutionException, InterruptedException, IllegalAccessException {
         // Fetch the chat document to validate the user and counselor IDs (Firestore)
         DocumentSnapshot chatSnapshot = firestore.collection("chats").document(chatId).get().get();
 

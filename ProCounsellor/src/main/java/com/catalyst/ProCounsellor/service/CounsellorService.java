@@ -19,8 +19,10 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 
@@ -416,4 +418,19 @@ public class CounsellorService {
 	        DocumentSnapshot snapshot = firestore.collection("counsellors").document(counsellorId).get().get();
 	        return snapshot.exists() ? snapshot.toObject(Counsellor.class) : null;
 	    }
+
+
+	 public void markFollowersNotificationAsSeen(String counsellorId, String userId) {
+		 	DatabaseReference dbRef = FirebaseDatabase.getInstance().getReference("realtimeSubscribers");
+		 	Map<String, Object> updates = new HashMap<>();
+			updates.put(userId, true);
+			dbRef.child(counsellorId).updateChildrenAsync(updates);
+		}
+	 
+	 public void markSubscribersNotificationAsSeen(String counsellorId, String userId) {
+		 DatabaseReference dbRef = FirebaseDatabase.getInstance().getReference("realtimeSubscribers");
+		 Map<String, Object> updates = new HashMap<>();
+		 updates.put(userId, true);
+		 dbRef.child(counsellorId).updateChildrenAsync(updates);
+	  }
 }

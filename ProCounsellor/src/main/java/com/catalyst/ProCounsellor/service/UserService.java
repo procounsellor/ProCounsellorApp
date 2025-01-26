@@ -21,6 +21,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CountDownLatch;
@@ -211,6 +212,8 @@ public class UserService {
 
             // Update both entities in Firebase
             updateUser(user);
+            updateRealtimeSubscribers(counsellorId, userId);
+            
             sharedService.updateCounsellor(counsellor);
 
             return true;
@@ -218,6 +221,15 @@ public class UserService {
             e.printStackTrace();
             return false;
         }
+    }
+    
+    private void updateRealtimeSubscribers(String counsellorId, String userId) {
+        DatabaseReference dbRef = FirebaseDatabase.getInstance().getReference("realtimeSubscribers");
+
+        Map<String, Object> updates = new HashMap<>();
+        updates.put(userId, false); // true false for managing notification seen status
+
+        dbRef.child(counsellorId).updateChildrenAsync(updates);
     }
     
     public List<Counsellor> getSubscribedCounsellors(String userId) {
@@ -290,6 +302,8 @@ public class UserService {
 
             // Update both entities in Firebase
             updateUser(user);
+            updateRealtimeFollowers(counsellorId, userId);
+            
             sharedService.updateCounsellor(counsellor);
 
             return true;
@@ -298,6 +312,15 @@ public class UserService {
             return false;
         }
 	}
+	
+	private void updateRealtimeFollowers(String counsellorId, String userId) {
+        DatabaseReference dbRef = FirebaseDatabase.getInstance().getReference("realtimeFollowers");
+
+        Map<String, Object> updates = new HashMap<>();
+        updates.put(userId, false); // true false for managing notification seen status
+
+        dbRef.child(counsellorId).updateChildrenAsync(updates);
+    }
 	
 	public boolean isSubscribedToCounsellor(String userId, String counsellorId) {
 	    try {

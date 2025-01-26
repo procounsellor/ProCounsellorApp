@@ -23,15 +23,12 @@ public class User {
     private Courses interestedCourse;//right now, allowing only one degree interest per user. //Aligning with counsellor's expertise
     private List<String> subscribedCounsellorIds; 
     private List<String> followedCounsellorsIds;
-    private Double balance; 
-    private Address address;
-    private boolean isConverted;
-    private DegreeType degreeType;
-    private Stream stream; 
-    private List<Degree> interestedDegree;
+    private Double balance;
     private List<College> interestedColleges;
     private List<String> interestedLocationsForCollege;
     private List<String> userReviewIds;
+    private List<String> chatIdsCreatedForUser;
+    private List<String> languagesKnow;
 }
 
        
