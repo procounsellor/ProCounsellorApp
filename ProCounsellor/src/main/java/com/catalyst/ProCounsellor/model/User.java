@@ -16,7 +16,8 @@ public class User {
     private String phoneNumber; 
     private String email;   
     private String password;
-    private String role; 
+    private String role;
+    private List<String> activityLog;
     private String photo;
     private List<AllowedStates> userInterestedStateOfCounsellors;
     //mandatory field

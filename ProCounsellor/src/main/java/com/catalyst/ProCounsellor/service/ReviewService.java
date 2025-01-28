@@ -7,6 +7,7 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import com.catalyst.ProCounsellor.dto.SendCounsellorReviews;
@@ -25,9 +26,15 @@ import com.google.cloud.firestore.Query;
 import com.google.cloud.firestore.QueryDocumentSnapshot;
 import com.google.cloud.firestore.QuerySnapshot;
 import com.google.firebase.cloud.FirestoreClient;
+import com.google.firebase.database.DatabaseReference;
+import com.google.firebase.database.FirebaseDatabase;
 
 @Service
 public class ReviewService {
+	
+	@Autowired
+	private SharedService sharedService;
+	
     Firestore firestore = FirestoreClient.getFirestore();
     
     private boolean doesDocumentExist(String collection, String documentId) throws InterruptedException, ExecutionException {
@@ -62,9 +69,30 @@ public class ReviewService {
         // Add the review to both the user's and the counsellor's review lists
         addReviewIDToUser(userName, reviewId);
         addReviewIDToCounsellor(counsellorName, reviewId);
+        notifyCounsellorAboutReview(reviewId, counsellorName, userName);
     }
     
-    private void addReviewIDToUser(String userName, String reviewId) throws Exception {
+    private void notifyCounsellorAboutReview(String reviewId, String counsellorName, String userName) throws ExecutionException, InterruptedException {
+    	DatabaseReference dbRef = FirebaseDatabase.getInstance().getReference("counsellorRealtimeReview");
+
+        Map<String, Object> updates = new HashMap<>();
+        updates.put(userName, false);
+
+        dbRef.child(counsellorName).updateChildrenAsync(updates);
+        
+        User user = sharedService.getUserById(userName);
+        Counsellor counsellor = sharedService.getCounsellorById(counsellorName);
+        
+        if (counsellor.getActivityLog() == null) {
+        	counsellor.setActivityLog(new ArrayList<>());
+        }
+        
+        counsellor.getActivityLog().add(user.getFirstName() + " " + user.getLastName() + " (" + user.getUserName() + ")" + " has given you a review.");
+        sharedService.updateCounsellor(counsellor);
+	}
+
+
+	private void addReviewIDToUser(String userName, String reviewId) throws Exception {
         DocumentReference userRef = firestore.collection("users").document(userName);
         DocumentSnapshot userDoc = userRef.get().get();
 
@@ -192,9 +220,6 @@ public class ReviewService {
         return new ArrayList<>();
     }
 
-   
-
-
 	// Fetch all reviews for a specific counselor
     public List<SendCounsellorReviews> getReviewsForCounsellor(String counsellorName) throws InterruptedException, ExecutionException {
         DocumentReference counsellorRef = firestore.collection("counsellors").document(counsellorName);
@@ -321,6 +346,38 @@ public class ReviewService {
             // Update the noOfLikes field based on the size of userIdsLiked list
             reviewRef.update("noOfLikes", userIdsLiked.size());
         }
+        
+        updateRealtimeReviewLike(reviewId, userId);
+        
+        String reviewGivenByUserId = (String) document.get("userName");
+        notifyUserAboutLike(reviewGivenByUserId, userId, reviewId);
+    }
+    
+    private void notifyUserAboutLike(String reviewGivenByUserId, String userId, String reviewId) throws ExecutionException, InterruptedException {
+    	 User user = sharedService.getUserById(reviewGivenByUserId);
+    	 User userGivenLike = sharedService.getUserById(userId);
+         
+         if (user.getActivityLog() == null) {
+        	 user.setActivityLog(new ArrayList<>());
+         }
+         
+         user.getActivityLog().add(userGivenLike.getFirstName() + " " + userGivenLike.getLastName() + " (" + userGivenLike.getUserName() + ")" + " has liked your review.");
+         sharedService.updateUser(user);
+	}
+
+
+	//To fetch notifications for real time likes on the review.
+    private void updateRealtimeReviewLike(String reviewId, String userId) {
+    	DatabaseReference dbRef = FirebaseDatabase.getInstance().getReference("realtimeReviews")
+                .child(reviewId).child("likes").child(userId);
+
+        dbRef.setValue(true, (error, ref) -> {
+            if (error == null) {
+                System.out.println("Like added successfully for review: " + reviewId + " by user: " + userId);
+            } else {
+                System.err.println("Failed to add like: " + error.getMessage());
+            }
+        });
     }
 
     public void unlikeReview(String reviewId, String userId) throws ExecutionException, InterruptedException, Exception {
@@ -378,6 +435,45 @@ public class ReviewService {
 
         comments.add(comment);
         reviewRef.update("comments", comments);
+        updateRealtimeReviewComments(reviewId, userName, comment);
+        
+        String reviewGivenByUserId = (String) reviewSnapshot.get("userName");
+        notifyUserAboutComment(reviewGivenByUserId, userName, reviewId);
+    }
+    
+    private void notifyUserAboutComment(String reviewGivenByUserId, String userId, String reviewId) throws ExecutionException, InterruptedException {
+   	 User user = sharedService.getUserById(reviewGivenByUserId);
+   	 User userGivenComment = sharedService.getUserById(userId);
+        
+        if (user.getActivityLog() == null) {
+       	 user.setActivityLog(new ArrayList<>());
+        }
+        
+        user.getActivityLog().add(userGivenComment.getFirstName() + " " + userGivenComment.getLastName() + " (" + userGivenComment.getUserName() + ")" + " has commented on your review.");
+        sharedService.updateUser(user);
+	}
+    
+    //To fetch notifications for real time comments on the review.
+    public void updateRealtimeReviewComments(String reviewId, String userId, UserReviewComments comment) {
+    	DatabaseReference dbRef = FirebaseDatabase.getInstance().getReference("realtimeReviews")
+                .child(reviewId).child("comments");
+
+        if (comment.getUserReviewCommentId() != null) {
+            Map<String, Object> commentData = new HashMap<>();
+            commentData.put("userId", userId);
+            commentData.put("commentText", comment.getCommentText());
+            commentData.put("timestamp", comment.getTimestamp());
+
+            dbRef.child(comment.getUserReviewCommentId()).setValue(commentData, (error, ref) -> {
+                if (error == null) {
+                    System.out.println("Comment added successfully for review: " + reviewId);
+                } else {
+                    System.err.println("Failed to add comment: " + error.getMessage());
+                }
+            });
+        } else {
+            System.err.println("Failed to generate unique comment ID for review: " + reviewId);
+        }
     }
     
     public void updateComment(String reviewId, String commentId, UserReviewComments updatedComment) throws Exception {

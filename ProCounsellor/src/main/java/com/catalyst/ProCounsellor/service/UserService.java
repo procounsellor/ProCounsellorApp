@@ -204,10 +204,15 @@ public class UserService {
             if (counsellor.getClientIds() == null) {
                 counsellor.setClientIds(new ArrayList<>());
             }
+            
+            if(counsellor.getActivityLog() == null) {
+            	counsellor.setActivityLog(new ArrayList<>());
+            }
 
             // Add the user's ID to the counsellor's clientIds list
             if (!counsellor.getClientIds().contains(userId)) {
                 counsellor.getClientIds().add(userId);
+                counsellor.getActivityLog().add(user.getFirstName() + " " + user.getLastName() + " (" + user.getUserName() + ")" + " subscribed you.");
             }
 
             // Update both entities in Firebase
@@ -294,10 +299,15 @@ public class UserService {
             if (counsellor.getFollowerIds() == null) {
                 counsellor.setFollowerIds(new ArrayList<>());
             }
+            
+            if (counsellor.getActivityLog() == null) {
+            	counsellor.setActivityLog(new ArrayList<>());
+            }
 
             // Add the user's ID to the counsellor's clientIds list
             if (!counsellor.getFollowerIds().contains(userId)) {
                 counsellor.getFollowerIds().add(userId);
+                counsellor.getActivityLog().add(user.getFirstName() + " " + user.getLastName() + " (" + user.getUserName() + ")" + " followed you.");
             }
 
             // Update both entities in Firebase
