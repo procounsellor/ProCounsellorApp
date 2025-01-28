@@ -19,6 +19,10 @@ public class SharedService {
 	        firestore.collection("counsellors").document(counsellor.getUserName()).set(counsellor).get();
 	    }
 	    
+	    public void updateUser(User user) throws ExecutionException, InterruptedException {
+	        firestore.collection("users").document(user.getUserName()).set(user).get();
+	    }
+	    
 	    public User getUserById(String userId) throws ExecutionException, InterruptedException {
 	        DocumentSnapshot snapshot = firestore.collection("users").document(userId).get().get();
 	        return snapshot.exists() ? snapshot.toObject(User.class) : null;
