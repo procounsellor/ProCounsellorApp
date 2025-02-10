@@ -13,6 +13,7 @@ import com.google.firebase.database.ValueEventListener;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -20,6 +21,14 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
+
+import com.google.cloud.storage.Acl;
+import com.google.cloud.storage.Blob;
+import com.google.cloud.storage.Bucket;
+import com.google.cloud.storage.Storage;
+import com.google.firebase.cloud.StorageClient;
+import com.google.cloud.firestore.DocumentSnapshot;
+
 
 @Service
 public class ChatService {
@@ -176,6 +185,48 @@ public class ChatService {
         messageData.put("timestamp", System.currentTimeMillis());
 
         chatMessagesRef.child(messageId).setValueAsync(messageData);
+    }
+
+    public String sendFileMessage(String chatId, String senderId, MultipartFile file) throws Exception {
+        // Fetch chat details to verify sender
+        DocumentSnapshot chatSnapshot = firestore.collection("chats").document(chatId).get().get();
+
+        if (!chatSnapshot.exists()) {
+            throw new IllegalArgumentException("Chat not found.");
+        }
+
+        String storedUserId = chatSnapshot.getString("userId");
+        String storedCounselorId = chatSnapshot.getString("counsellorId");
+
+        // Validate sender
+        if (!senderId.equals(storedUserId) && !senderId.equals(storedCounselorId)) {
+            throw new IllegalAccessException("You are not authorized to send a file in this chat.");
+        }
+
+        // Upload file to Firebase Storage
+        String fileName = "chats/" + chatId + "/" + System.currentTimeMillis() + "_" + file.getOriginalFilename();
+        Bucket bucket = StorageClient.getInstance().bucket("procounsellor-71824.firebasestorage.app");
+        Blob blob = bucket.create(fileName, file.getInputStream(), file.getContentType());
+        
+        blob.createAcl(Acl.of(Acl.User.ofAllUsers(), Acl.Role.READER));//Make URL publicly accessible.
+
+        String fileUrl = "https://storage.googleapis.com/" + bucket.getName() + "/" + fileName;
+
+        // Save message in Firebase Realtime Database
+        DatabaseReference chatMessagesRef = firebaseDatabase.getReference("chats").child(chatId).child("messages");
+        String messageId = chatMessagesRef.push().getKey();
+
+        Map<String, Object> messageData = new HashMap<>();
+        messageData.put("senderId", senderId);
+        messageData.put("fileUrl", fileUrl);
+        messageData.put("fileName", file.getOriginalFilename());
+        messageData.put("fileType", file.getContentType());
+        messageData.put("isSeen", false);
+        messageData.put("timestamp", System.currentTimeMillis());
+
+        chatMessagesRef.child(messageId).setValueAsync(messageData);
+
+        return fileUrl;
     }
 
     public CompletableFuture<List<Map<String, Object>>> getChatMessages(String chatId) {
