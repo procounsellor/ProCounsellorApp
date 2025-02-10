@@ -8,6 +8,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.Collections;
 import java.util.List;
@@ -45,6 +46,24 @@ public class ChatController {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body(e.getMessage());
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error sending message.");
+        }
+    }
+    
+    //To send Media
+    @PostMapping("/{chatId}/files")
+    public ResponseEntity<?> sendFileMessage(
+            @PathVariable String chatId,
+            @RequestParam("senderId") String senderId,
+            @RequestParam("file") MultipartFile file) {
+        try {
+            String fileUrl = chatService.sendFileMessage(chatId, senderId, file);
+            return ResponseEntity.status(HttpStatus.CREATED).body("File sent successfully! URL: " + fileUrl);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
+        } catch (IllegalAccessException e) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(e.getMessage());
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error sending file.");
         }
     }
 
