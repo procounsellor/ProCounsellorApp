@@ -9,7 +9,9 @@ import com.catalyst.ProCounsellor.config.JwtKeyProvider;
 import com.catalyst.ProCounsellor.exception.InvalidCredentialsException;
 import com.catalyst.ProCounsellor.exception.UserNotFoundException;
 import com.catalyst.ProCounsellor.model.Admin;
+import com.catalyst.ProCounsellor.model.AllowedStates;
 import com.catalyst.ProCounsellor.model.Counsellor;
+import com.catalyst.ProCounsellor.model.Courses;
 import com.catalyst.ProCounsellor.model.User;
 import com.catalyst.ProCounsellor.service.AdminService;
 import com.catalyst.ProCounsellor.service.CounsellorService;
@@ -21,6 +23,7 @@ import com.google.firebase.auth.FirebaseAuthException;
 import io.jsonwebtoken.Jwts;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
 
@@ -63,14 +66,39 @@ public class AuthController {
 
 
     @PostMapping("/counsellorSignup")
-    public ResponseEntity<Map<String, Object>> counsellorSignup(@RequestBody Counsellor counsellor) throws ExecutionException, InterruptedException {
+    public ResponseEntity<Map<String, Object>> counsellorSignup(
+            @RequestParam String firstName,
+            @RequestParam String lastName,
+            @RequestParam String phoneNumber,
+            @RequestParam String email,
+            @RequestParam String password,
+            @RequestParam Double ratePerYear,
+            @RequestParam AllowedStates stateOfCounsellor,
+            @RequestParam List<Courses> expertise) throws ExecutionException, InterruptedException {
+
         try {
+            // Create a new Counsellor object and set the fields
+            Counsellor counsellor = new Counsellor();
+            if (!phoneNumber.startsWith("+")) {
+                phoneNumber = phoneNumber.replace(" ", "+");
+            }
+            counsellor.setUserName(phoneNumber.replaceFirst("^\\+\\d{2}", ""));  // Derive userName from phone
+            counsellor.setFirstName(firstName);
+            counsellor.setLastName(lastName);
+            counsellor.setPhoneNumber(phoneNumber);
+            counsellor.setEmail(email);
+            counsellor.setPassword(password);
+            counsellor.setRatePerYear(ratePerYear);
+            counsellor.setStateOfCounsellor(stateOfCounsellor);
+            counsellor.setExpertise(expertise);
+
             String message = counsellorService.signup(counsellor);
             return buildResponse(message, HttpStatus.CREATED);
         } catch (Exception e) {
             return buildResponse(e.getMessage(), HttpStatus.BAD_REQUEST);
         }
     }
+
 
     @PostMapping("/counsellorSignin")
     public ResponseEntity<Map<String, Object>> counsellorSignin(@RequestParam String identifier, @RequestParam String password) throws ExecutionException, InterruptedException, FirebaseAuthException {
