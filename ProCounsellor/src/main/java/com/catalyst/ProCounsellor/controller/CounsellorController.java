@@ -74,8 +74,7 @@ public class CounsellorController {
 	    try {
 	        List<User> clients = counsellorService.getSubscribedClients(counsellorId);
 	        if (clients == null || clients.isEmpty()) {
-	            return ResponseEntity.status(HttpStatus.NOT_FOUND)
-	                                 .body("No clients found for counsellor with ID: " + counsellorId);
+	            return ResponseEntity.ok("No clients found for counsellor with ID: " + counsellorId);
 	        }
 	        return ResponseEntity.ok(clients);
 	    } catch (Exception e) {
