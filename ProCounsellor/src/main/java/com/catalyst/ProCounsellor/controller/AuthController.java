@@ -214,7 +214,7 @@ public class AuthController {
             responseStatus = HttpStatus.OK;
             userId = userService.getUserNameFromPhoneNumber(phoneNumber);
         } else {
-            responseMessage = userService.newSignup(phoneNumber);
+            responseMessage = userService.userSignup(phoneNumber);
             responseStatus = responseMessage.startsWith("Signup successful") ? HttpStatus.CREATED : HttpStatus.BAD_REQUEST; // New signup
 
             try {

@@ -39,7 +39,7 @@ public class UserService {
     private static final String USERS = "users";
     
     // New Signup functionality
-    public String newSignup(String phoneNumber) throws ExecutionException, InterruptedException {
+    public String userSignup(String phoneNumber) throws ExecutionException, InterruptedException {
         Firestore dbFirestore = FirestoreClient.getFirestore();
 
         // Check for uniqueness of phoneNumber

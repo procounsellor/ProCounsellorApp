@@ -181,7 +181,7 @@ public class ReviewController {
     public String getUserFullName(@PathVariable String userName) {
         try {
             // Call the service method to fetch the full name
-            return reviewService.getUserFullNameFromUserName(userName);
+            return reviewService.getFullNameFromUserName(userName);
         } catch (Exception e) {
             e.printStackTrace();
             return "Error fetching counsellor's full name";

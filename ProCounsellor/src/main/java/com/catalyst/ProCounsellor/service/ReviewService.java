@@ -270,7 +270,7 @@ public class ReviewService {
         }
     }
     
-    public String getUserFullNameFromUserName(String userName) {
+    public String getFullNameFromUserName(String userName) {
         try {
             DocumentSnapshot documentSnapshot = firestore.collection("users")
                     .document(userName)
@@ -287,8 +287,23 @@ public class ReviewService {
                     return userName;
                 }
             } else {
-                return "Counsellor not found";
+            	DocumentSnapshot documentSnapshotCounsellor = firestore.collection("counsellors")
+                        .document(userName)
+                        .get()
+                        .get();
+                
+                if (documentSnapshotCounsellor.exists()) {
+                    String firstName = documentSnapshotCounsellor.getString("firstName");
+                    String lastName = documentSnapshotCounsellor.getString("lastName");
+                    
+                    if (firstName != null && lastName != null) {
+                        return firstName + " " + lastName;
+                    } else {
+                        return userName;
+                    }
             }
+                return null;
+           }
         } catch (Exception e) {
             e.printStackTrace();
             return "Error retrieving Counsellor details";
@@ -356,13 +371,21 @@ public class ReviewService {
     private void notifyUserAboutLike(String reviewGivenByUserId, String userId, String reviewId) throws ExecutionException, InterruptedException {
     	 User user = sharedService.getUserById(reviewGivenByUserId);
     	 User userGivenLike = sharedService.getUserById(userId);
-         
-         if (user.getActivityLog() == null) {
+    	 
+    	 if (user.getActivityLog() == null) {
         	 user.setActivityLog(new ArrayList<>());
          }
-         
-         user.getActivityLog().add(userGivenLike.getFirstName() + " " + userGivenLike.getLastName() + " (" + userGivenLike.getUserName() + ")" + " has liked your review.");
-         sharedService.updateUser(user);
+    	 
+    	 if(userGivenLike == null) {
+    		 Counsellor counsellorGivenLike = sharedService.getCounsellorById(userId);
+    		 
+    		 user.getActivityLog().add(counsellorGivenLike.getFirstName() + " " + counsellorGivenLike.getLastName() + " (" + counsellorGivenLike.getUserName() + ")" + " has liked your review.");
+             sharedService.updateUser(user);
+    	 }
+    	 else {
+    		 user.getActivityLog().add(userGivenLike.getFirstName() + " " + userGivenLike.getLastName() + " (" + userGivenLike.getUserName() + ")" + " has liked your review.");
+             sharedService.updateUser(user);
+    	 }
 	}
 
 
@@ -431,7 +454,8 @@ public class ReviewService {
         comment.setUserReviewCommentId(UUID.randomUUID().toString());
         comment.setTimestamp(Timestamp.now());
         comment.setUserName(userName);
-        comment.setPhotoUrl(getUserPhotoUrl(userName));
+        comment.setPhotoUrl(getPhotoUrl(userName));
+        comment.setUserFullName(getFullName(userName));
 
         comments.add(comment);
         reviewRef.update("comments", comments);
@@ -449,8 +473,15 @@ public class ReviewService {
        	 user.setActivityLog(new ArrayList<>());
         }
         
-        user.getActivityLog().add(userGivenComment.getFirstName() + " " + userGivenComment.getLastName() + " (" + userGivenComment.getUserName() + ")" + " has commented on your review.");
-        sharedService.updateUser(user);
+        if(userGivenComment == null) {
+        	Counsellor counsellorGivenComment = sharedService.getCounsellorById(userId);
+        	user.getActivityLog().add(counsellorGivenComment.getFirstName() + " " + counsellorGivenComment.getLastName() + " (" + counsellorGivenComment.getUserName() + ")" + " has commented on your review.");
+            sharedService.updateUser(user);
+        }
+        else {
+        	user.getActivityLog().add(userGivenComment.getFirstName() + " " + userGivenComment.getLastName() + " (" + userGivenComment.getUserName() + ")" + " has commented on your review.");
+            sharedService.updateUser(user);
+        }
 	}
     
     //To fetch notifications for real time comments on the review.
@@ -554,7 +585,7 @@ public class ReviewService {
         return review.getComments() != null ? review.getComments() : new ArrayList<>();
     }
     
-    public String getUserPhotoUrl(String userName) throws InterruptedException, ExecutionException {
+    public String getPhotoUrl(String userName) throws InterruptedException, ExecutionException {
     	DocumentReference userRef = firestore.collection("users").document(userName);
         ApiFuture<DocumentSnapshot> future = userRef.get();
         DocumentSnapshot document = future.get();
@@ -565,18 +596,42 @@ public class ReviewService {
                 return user.getPhoto();
             }
         }
+        else {
+        	DocumentReference counsellorRef = firestore.collection("counsellors").document(userName);
+            ApiFuture<DocumentSnapshot> counsellorFuture = counsellorRef.get();
+            DocumentSnapshot counsellorDocument = counsellorFuture.get();
+
+            if (counsellorDocument.exists()) {
+                Counsellor counsellor = counsellorDocument.toObject(Counsellor.class);
+                if (counsellor != null) {
+                    return counsellor.getPhotoUrl();
+                }
+            }
+        }
         return null;
     }
     
-    public String getCounsellorPhotoUrl(String counsellorName) throws InterruptedException, ExecutionException {
-    	DocumentReference userRef = firestore.collection("counsellors").document(counsellorName);
+    public String getFullName(String userName) throws InterruptedException, ExecutionException {
+    	DocumentReference userRef = firestore.collection("users").document(userName);
         ApiFuture<DocumentSnapshot> future = userRef.get();
         DocumentSnapshot document = future.get();
 
         if (document.exists()) {
-            Counsellor counsellor = document.toObject(Counsellor.class);
-            if (counsellor != null) {
-                return counsellor.getPhotoUrl();
+            User user = document.toObject(User.class);
+            if (user != null) {
+                return user.getFirstName() + " " + user.getLastName();
+            }
+        }
+        else {
+        	DocumentReference counsellorRef = firestore.collection("counsellors").document(userName);
+            ApiFuture<DocumentSnapshot> counsellorFuture = counsellorRef.get();
+            DocumentSnapshot counsellorDocument = counsellorFuture.get();
+
+            if (counsellorDocument.exists()) {
+                Counsellor counsellor = counsellorDocument.toObject(Counsellor.class);
+                if (counsellor != null) {
+                	return counsellor.getFirstName() + " " + counsellor.getLastName();
+                }
             }
         }
         return null;
@@ -596,7 +651,7 @@ public class ReviewService {
 		sendUserReviews.setCounsellorName(counsellorName);
 		String counsellorFullName = getCounsellorFullNameFromUserName(counsellorName);
 		sendUserReviews.setCounsellorFullName(counsellorFullName);
-		sendUserReviews.setCounsellorPhotoUrl(getCounsellorPhotoUrl(counsellorName));
+		sendUserReviews.setCounsellorPhotoUrl(getPhotoUrl(counsellorName));
 		sendUserReviews.setReviewText(userReview.getString("reviewText"));
 		sendUserReviews.setUserIdsLiked((List<String>) userReview.get("userIdsLiked"));
 		sendUserReviews.setRating(userReview.getDouble("rating"));
@@ -608,8 +663,8 @@ public class ReviewService {
 		if(listOfComments != null) {
 			for (Map<String, Object> commentMap : listOfComments) {
 			    String userNameOfComment = (String) commentMap.get("userName");
-			    commentMap.put("userFullName", getUserFullNameFromUserName(userNameOfComment));
-			    commentMap.put("photoUrl", getUserPhotoUrl(userNameOfComment));
+			    commentMap.put("userFullName", getFullNameFromUserName(userNameOfComment));
+			    commentMap.put("photoUrl", getPhotoUrl(userNameOfComment));
 			}
 		}
         
@@ -625,9 +680,9 @@ public class ReviewService {
 		sendCounsellorReviews.setCounsellorName(userReview.getString("counsellorName"));
 		String userName = userReview.getString("userName");
 		sendCounsellorReviews.setUserName(userName);
-		String userFullName = getUserFullNameFromUserName(userName);
+		String userFullName = getFullNameFromUserName(userName);
 		sendCounsellorReviews.setUserFullName(userFullName);
-		sendCounsellorReviews.setUserPhotoUrl(getUserPhotoUrl(userName));
+		sendCounsellorReviews.setUserPhotoUrl(getPhotoUrl(userName));
 		sendCounsellorReviews.setReviewText(userReview.getString("reviewText"));
 		sendCounsellorReviews.setUserIdsLiked((List<String>) userReview.get("userIdsLiked"));
 		sendCounsellorReviews.setRating(userReview.getDouble("rating"));
@@ -638,8 +693,8 @@ public class ReviewService {
 		if(listOfComments != null) {
 			for (Map<String, Object> commentMap : listOfComments) {
 			    String userNameOfComment = (String) commentMap.get("userName");
-			    commentMap.put("userFullName", getUserFullNameFromUserName(userNameOfComment));
-			    commentMap.put("photoUrl", getUserPhotoUrl(userNameOfComment));
+			    commentMap.put("userFullName", getFullNameFromUserName(userNameOfComment));
+			    commentMap.put("photoUrl", getPhotoUrl(userNameOfComment));
 			}
 		}
         
