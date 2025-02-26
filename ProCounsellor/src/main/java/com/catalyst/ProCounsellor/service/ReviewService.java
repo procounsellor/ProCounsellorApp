@@ -12,6 +12,7 @@ import org.springframework.stereotype.Service;
 
 import com.catalyst.ProCounsellor.dto.SendCounsellorReviews;
 import com.catalyst.ProCounsellor.dto.SendUserReviews;
+import com.catalyst.ProCounsellor.model.ActivityLog;
 import com.catalyst.ProCounsellor.model.Counsellor;
 import com.catalyst.ProCounsellor.model.User;
 import com.catalyst.ProCounsellor.model.UserReview;
@@ -87,7 +88,11 @@ public class ReviewService {
         	counsellor.setActivityLog(new ArrayList<>());
         }
         
-        counsellor.getActivityLog().add(user.getFirstName() + " " + user.getLastName() + " (" + user.getUserName() + ")" + " has given you a review.");
+        String activityString =  user.getFirstName() + " " + user.getLastName() + " (" + user.getUserName() + ")" + " has given you a review.";
+        
+        ActivityLog activity = sharedService.createActivityObject(activityString);
+        counsellor.getActivityLog().add(activity);
+        
         sharedService.updateCounsellor(counsellor);
 	}
 
@@ -379,11 +384,16 @@ public class ReviewService {
     	 if(userGivenLike == null) {
     		 Counsellor counsellorGivenLike = sharedService.getCounsellorById(userId);
     		 
-    		 user.getActivityLog().add(counsellorGivenLike.getFirstName() + " " + counsellorGivenLike.getLastName() + " (" + counsellorGivenLike.getUserName() + ")" + " has liked your review.");
+    		 String activityString = counsellorGivenLike.getFirstName() + " " + counsellorGivenLike.getLastName() + " (" + counsellorGivenLike.getUserName() + ")" + " has liked your review.";
+    	     ActivityLog activity = sharedService.createActivityObject(activityString);
+    		 
+    		 user.getActivityLog().add(activity);
              sharedService.updateUser(user);
     	 }
     	 else {
-    		 user.getActivityLog().add(userGivenLike.getFirstName() + " " + userGivenLike.getLastName() + " (" + userGivenLike.getUserName() + ")" + " has liked your review.");
+    		 String activityString = userGivenLike.getFirstName() + " " + userGivenLike.getLastName() + " (" + userGivenLike.getUserName() + ")" + " has liked your review.";
+    		 ActivityLog activity = sharedService.createActivityObject(activityString);
+    		 user.getActivityLog().add(activity);
              sharedService.updateUser(user);
     	 }
 	}
@@ -475,11 +485,18 @@ public class ReviewService {
         
         if(userGivenComment == null) {
         	Counsellor counsellorGivenComment = sharedService.getCounsellorById(userId);
-        	user.getActivityLog().add(counsellorGivenComment.getFirstName() + " " + counsellorGivenComment.getLastName() + " (" + counsellorGivenComment.getUserName() + ")" + " has commented on your review.");
+        	String activityString = counsellorGivenComment.getFirstName() + " " + counsellorGivenComment.getLastName() + " (" + counsellorGivenComment.getUserName() + ")" + " has commented on your review.";
+            ActivityLog activity = sharedService.createActivityObject(activityString);
+        	
+        	user.getActivityLog().add(activity);
             sharedService.updateUser(user);
         }
         else {
-        	user.getActivityLog().add(userGivenComment.getFirstName() + " " + userGivenComment.getLastName() + " (" + userGivenComment.getUserName() + ")" + " has commented on your review.");
+        	String activityString = userGivenComment.getFirstName() + " " + userGivenComment.getLastName() + " (" + userGivenComment.getUserName() + ")" + " has commented on your review.";
+            ActivityLog activity = sharedService.createActivityObject(activityString);
+                	
+        	
+        	user.getActivityLog().add(activity);
             sharedService.updateUser(user);
         }
 	}

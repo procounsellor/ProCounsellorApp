@@ -3,6 +3,7 @@ package com.catalyst.ProCounsellor.service;
 
 import com.catalyst.ProCounsellor.exception.InvalidCredentialsException;
 import com.catalyst.ProCounsellor.exception.UserNotFoundException;
+import com.catalyst.ProCounsellor.model.ActivityLog;
 import com.catalyst.ProCounsellor.model.AllowedStates;
 import com.catalyst.ProCounsellor.model.Counsellor;
 import com.catalyst.ProCounsellor.model.Courses;
@@ -20,6 +21,7 @@ import com.google.firebase.database.ValueEventListener;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -212,7 +214,9 @@ public class UserService {
             // Add the user's ID to the counsellor's clientIds list
             if (!counsellor.getClientIds().contains(userId)) {
                 counsellor.getClientIds().add(userId);
-                counsellor.getActivityLog().add(user.getFirstName() + " " + user.getLastName() + " (" + user.getUserName() + ")" + " subscribed you.");
+                String activityString = user.getFirstName() + " " + user.getLastName() + " (" + user.getUserName() + ")" + " subscribed you.";
+                ActivityLog activity = sharedService.createActivityObject(activityString);
+                counsellor.getActivityLog().add(activity);
             }
 
             // Update both entities in Firebase
@@ -228,7 +232,9 @@ public class UserService {
         }
     }
     
-    private void updateRealtimeSubscribers(String counsellorId, String userId) {
+    
+
+	private void updateRealtimeSubscribers(String counsellorId, String userId) {
         DatabaseReference dbRef = FirebaseDatabase.getInstance().getReference("realtimeSubscribers");
 
         Map<String, Object> updates = new HashMap<>();
@@ -307,7 +313,9 @@ public class UserService {
             // Add the user's ID to the counsellor's clientIds list
             if (!counsellor.getFollowerIds().contains(userId)) {
                 counsellor.getFollowerIds().add(userId);
-                counsellor.getActivityLog().add(user.getFirstName() + " " + user.getLastName() + " (" + user.getUserName() + ")" + " followed you.");
+                String activityString = user.getFirstName() + " " + user.getLastName() + " (" + user.getUserName() + ")" + " followed you.";
+                ActivityLog activity = sharedService.createActivityObject(activityString);
+                counsellor.getActivityLog().add(activity);
             }
 
             // Update both entities in Firebase
