@@ -24,6 +24,7 @@ public class Counsellor {
     private String experience;
     private String role;
     private List<ActivityLog> activityLog;
+    private List<CallHistory> callHistory;
     private AllowedStates stateOfCounsellor;
     private List<String> chatIdsCreatedForCounsellor;
     private Double ratePerYear;
