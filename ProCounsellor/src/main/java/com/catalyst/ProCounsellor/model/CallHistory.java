@@ -14,8 +14,9 @@ public class CallHistory {
     private String callerId;
     private String receiverId;
     private String status;
-    private Date startTime;
-    private Date endTime;
-    private int duration;
+    private long startTime;
+    private long pickedTime;
+    private long endTime; 
+    private String duration; // Change from int to String
     private String callType;
 }
