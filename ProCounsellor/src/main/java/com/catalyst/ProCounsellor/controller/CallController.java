@@ -25,7 +25,11 @@ public class CallController {
     public void endCall(@PathVariable String callId) {
         callService.endCall(callId);
     }
-
+    
+    @PostMapping("/{callId}/declined")
+    public void declinedCall(@PathVariable String callId) {
+        callService.declinedCall(callId);
+    }
     
     //Stores SDP offer.
     @PostMapping("/{callId}/offer")
