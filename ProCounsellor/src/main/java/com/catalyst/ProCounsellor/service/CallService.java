@@ -63,7 +63,7 @@ public class CallService {
                             callRef.child("duration").setValueAsync("0");
                             callRef.child("status").setValueAsync("Missed Call");
                             callHistory.setStatus("Missed Call");
-                        }
+                            callRef.child("missedCallStatusSeen").setValueAsync(false);                       }
  
                         try {
                             saveCallDetailsToUserAndCounsellor(callHistory, callHistory.getCallerId(), callHistory.getReceiverId());
