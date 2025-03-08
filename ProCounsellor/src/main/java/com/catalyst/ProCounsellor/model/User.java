@@ -16,6 +16,8 @@ public class User {
     private String phoneNumber; 
     private String email;   
     private String password;
+    private Long walletAmount;
+    private BankDetails bankDetails;
     private String role;
     private List<ActivityLog> activityLog;
     private List<CallHistory> callHistory;
@@ -25,7 +27,6 @@ public class User {
     private Courses interestedCourse;//right now, allowing only one degree interest per user. //Aligning with counsellor's expertise
     private List<String> subscribedCounsellorIds; 
     private List<String> followedCounsellorsIds;
-    private Double balance;
     private List<College> interestedColleges;
     private List<String> interestedLocationsForCollege;
     private List<String> userReviewIds;
