@@ -14,7 +14,7 @@ public class UserReview {
     private String counsellorName; 
     private String reviewText;
     private List<String> userIdsLiked = new ArrayList<>(); 
-    private float rating;
+    private int rating;
     private Timestamp timestamp;
     private Integer noOfLikes;
     private List<UserReviewComments> comments;

@@ -1,7 +1,6 @@
 package com.catalyst.ProCounsellor.model;
 
 import java.util.List;
-import java.util.Map;
 
 import com.google.cloud.firestore.annotation.DocumentId;
 
@@ -18,6 +17,8 @@ public class Counsellor {
     private String phoneNumber; 
     private String description;// to be written in third party
     private String email;
+    private Long walletAmount;
+    private BankDetails bankDetails;
     private String photoUrl;
     private String password;
     private String organisationName;
