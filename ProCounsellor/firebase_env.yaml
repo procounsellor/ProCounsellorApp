@@ -1,0 +1,14 @@
+FIREBASE_CONFIG: >
+  {
+    "type": "service_account",
+    "project_id": "procounsellor-71824",
+    "private_key_id": "cdde3653c284ac7af45c3565cbcb1add9ca856d3",
+    "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEuwIBADANBgkqhkiG9w0BAQEFAASCBKUwggShAgEAAoIBAQCaoTOy7DL37gyD\nd7pqh0td5XkR7cZobe/iXPvCvr1jzdaMIG0r/d3xMCoEV+yebafZPzsN90nNU0j1\nGz1HhfrPGElHyqYKKAniWbHK9guniMK3uMF6869rOvZD4ztOIvmMdZsf1Q0RajO1\nRSA4ZK6fKXyGGda+4ahRzEy42X/5AcTgeFQ3lBK7IgJSxOHLeXjXy5Msu6a5dEIr\nkW20nHypLheOVdPKl0XLos6OgSMbeL2g9htSy9uLLQuBzWaXRRS7r/MHrZlpQj57\ni+DXRfymK5N1w1LD1M2ytQpOKvV+rbiKIudKiRvy6PI/RpmQ2o/yDzpe4IuSjC4g\n30V+mqajAgMBAAECgf8yIhGg8POVbpigBzFpWHQW/U9DgNPTB9G+kmcNvMmqkhH9\nXIYIvUY37GWzAs60jtjclqOO454J8/azgSFdDxNCEZ2wqQMsR87slCgQpbUhnDWF\nW2Ffe6JkIbm2SPXxX2WJJJgmueyCuOwK2V6Y6guzjr/Quo/lU0Q/QP2e8OWM1YS/\nAQKYAuku9Hq7evbE95hz84kE6uzkKNz1QkjY8Ov4apXpxtbFTZbvBWgFn/bsoOHt\n7MPZ3g1LueL74+nl6WeCaL8hzPa+DPUUDGNCj6m1hjpCTVs5wy9eZvPksrCKfpgq\nc7vbqlgj08RXxnnM5dbq9miFo2KV2OSCUVAB/tECgYEA02jH5JK3GXJ2qaT1mUBz\nU5Jx+t3HPVnbLxIrW16RolKMmMRx7kF6bU9lE4of/75SWEhy7FJLvZErMipMjmXl\nUT8HJ1Zl+6hrW30/iTgiVXTRL5mIVgkavpe5Y/zMMeExlclOdU6zsodSEourGdM8\neQXBnLs/stfOXg0DxfjqztkCgYEAuz6PQp6g0JYxA0gmlOGZEXgY3EE4cCGmK2k3\nDux6mdchUpdsXzh7WUwXq3ZnWTAj6EBuiSOP1oiSQATqBxxSflUjYSfhiZKHnr2C\nbELERr6nsaMUE8ayn6oiwSpZ4bitEUt7TxlyFr5WY82xpg++CyeEIMVpnXAAMa1t\nAyUfa9sCgYAQAnhYy++Hws5PrIlY0LOrGYT+LXtgHwTlPKgB5Fh9BWlWTFIga978\nli2eXDBuKpiLzPi/AsBvm6W8x81CX18NVwuQpA9XDnsK06JTHugitpT82NClS002\nL8E/XC6OfHJH2JXTdmFPXMYPV3pem0uSEqiF2PxK6+LZ5nxpqp8FiQKBgCCPLFIl\nS0l6FGPBtBPHdtp2y7vhC3NUJpT94rkRnfAKXJ0D/7A/HhPVC3ihSi9UE6pbKd1m\n9agUb3n6YMeDwUR+gXxvduR5OmP8CCXTJlY26OoWtXMK5hyldQ2p059Qgae0PGjw\nv8n8pwELz4xUyHMgF/Wq3kamJyJ8Sax2VBRpAoGBAIK+Yi1MqC8bJk//X2i7otmE\nxGglLaWJE+greETwfgKiLyNGUtIMEiZ9QK8HXbgxvj1MBL1JKi3eG2ZlOi2DFUfn\nxxTb+/R78qbdtccNPaBliO5GPKPM/BhXEzWZOr6ws9qpYv1F2FjJ/dPLC/gQ3srA\nuHEqLgB0JR6aHK/v1Upd\n-----END PRIVATE KEY-----\n",
+    "client_email": "firebase-adminsdk-a73ra@procounsellor-71824.iam.gserviceaccount.com",
+    "client_id": "103929007266538190850",
+    "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+    "token_uri": "https://oauth2.googleapis.com/token",
+    "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+    "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/firebase-adminsdk-a73ra%40procounsellor-71824.iam.gserviceaccount.com",
+    "universe_domain": "googleapis.com"
+  }
