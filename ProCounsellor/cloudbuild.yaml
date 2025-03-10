@@ -1,0 +1,40 @@
+steps:
+  # Step 1: Build the JAR file
+  - name: 'gcr.io/cloud-builders/mvn'
+    args: ['clean', 'package', '-DskipTests']
+
+  # Step 2: Build Docker image
+  - name: 'gcr.io/cloud-builders/docker'
+    args: 
+      - 'build'
+      - '-t'
+      - 'us-central1-docker.pkg.dev/$PROJECT_ID/procounsellor-backend-repo/backend:$COMMIT_SHA'
+      - '.'
+
+  # Step 3: Push Docker image to Artifact Registry
+  - name: 'gcr.io/cloud-builders/docker'
+    args: 
+      - 'push'
+      - 'us-central1-docker.pkg.dev/$PROJECT_ID/procounsellor-backend-repo/backend:$COMMIT_SHA'
+
+  # Step 4: Deploy to Cloud Run
+  - name: 'gcr.io/cloud-builders/gcloud'
+    args: 
+      - 'run'
+      - 'deploy'
+      - 'procounsellor-backend'
+      - '--image'
+      - 'us-central1-docker.pkg.dev/$PROJECT_ID/procounsellor-backend-repo/backend:$COMMIT_SHA'
+      - '--platform'
+      - 'managed'
+      - '--region'
+      - 'us-central1'
+      - '--allow-unauthenticated'
+      - '--port=8080'
+      - '--max-instances=3'
+
+substitutions:
+  _PROJECT_ID: "procounsellor-71824"
+
+images:
+  - 'us-central1-docker.pkg.dev/$PROJECT_ID/procounsellor-backend-repo/backend:$COMMIT_SHA'
