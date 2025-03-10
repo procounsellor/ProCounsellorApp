@@ -5,7 +5,6 @@ import java.util.List;
 import com.google.cloud.firestore.annotation.DocumentId;
 
 import lombok.Data;
-import lombok.var;
 
 @Data
 public class Counsellor {
@@ -34,7 +33,7 @@ public class Counsellor {
     private Integer noOfFollowers;
     private List<String> clientIds;
     private List<String> followerIds;
-    private var rating;
+    private Integer rating;
     private List<String> languagesKnow;
     private List<String> reviewIds;
     private String minuteSpendOnCall;
