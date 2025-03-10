@@ -35,7 +35,12 @@ public class UserService {
 	@Autowired
 	private SharedService sharedService;
 	
-	Firestore firestore = FirestoreClient.getFirestore();
+	private final Firestore firestore;
+
+    public UserService(Firestore firestore) {
+        this.firestore = firestore;
+	}
+	//Firestore firestore = FirestoreClient.getFirestore();
 	
     private static final String USERS = "users";
     
