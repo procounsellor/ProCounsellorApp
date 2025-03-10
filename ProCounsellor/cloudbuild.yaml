@@ -1,24 +1,33 @@
 steps:
+  # Step 1: Ensure dependencies are downloaded
+  - name: 'gcr.io/cloud-builders/mvn'
+    args: ['dependency:resolve']
+    dir: 'ProCounsellor'
+
+  # Step 2: Build the JAR file (Using Java 17)
   - name: 'gcr.io/cloud-builders/mvn'
     args: ['clean', 'package', '-DskipTests']
-    dir: 'ProCounsellor'  # Update if your project is inside a subdirectory
+    dir: 'ProCounsellor'
+    env:
+      - 'JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64'
 
-
-  # Step 2: Build Docker image
+  # Step 3: Build Docker image (Fixed directory context)
   - name: 'gcr.io/cloud-builders/docker'
     args: 
       - 'build'
       - '-t'
       - 'us-central1-docker.pkg.dev/$PROJECT_ID/procounsellor-backend-repo/backend:$COMMIT_SHA'
-      - '.'
+      - '-f'
+      - 'ProCounsellor/Dockerfile'   # Explicitly specify the Dockerfile
+      - 'ProCounsellor/'             # Set the correct context directory
 
-  # Step 3: Push Docker image to Artifact Registry
+  # Step 4: Push Docker image to Artifact Registry
   - name: 'gcr.io/cloud-builders/docker'
     args: 
       - 'push'
       - 'us-central1-docker.pkg.dev/$PROJECT_ID/procounsellor-backend-repo/backend:$COMMIT_SHA'
 
-  # Step 4: Deploy to Cloud Run
+  # Step 5: Deploy to Cloud Run
   - name: 'gcr.io/cloud-builders/gcloud'
     args: 
       - 'run'
@@ -42,5 +51,3 @@ images:
 
 options:
   logging: CLOUD_LOGGING_ONLY
-
-
