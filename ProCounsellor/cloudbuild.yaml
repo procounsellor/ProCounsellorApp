@@ -41,3 +41,5 @@ images:
 
 options:
   logging: CLOUD_LOGGING_ONLY
+logsBucket: gs://procounsellor-build-logs
+
