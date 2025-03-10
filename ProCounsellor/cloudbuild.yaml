@@ -1,35 +1,35 @@
 steps:
   # Step 1: Ensure dependencies are downloaded
-  - name: 'gcr.io/cloud-builders/mvn'
+  - name: 'maven:3.8.5-openjdk-17'  # Uses Java 17 explicitly
+    entrypoint: mvn
     args: ['dependency:resolve']
     dir: 'ProCounsellor'
 
-  # Step 2: Build the JAR file (Using Java 17)
-  - name: 'gcr.io/cloud-builders/mvn'
+  # Step 2: Build the JAR file
+  - name: 'maven:3.8.5-openjdk-17'
+    entrypoint: mvn
     args: ['clean', 'package', '-DskipTests']
     dir: 'ProCounsellor'
-    env:
-      - 'JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64'
 
-  # Step 3: Build Docker image (Fixed directory context)
+  # Step 3: Build Docker image (fixed context path)
   - name: 'gcr.io/cloud-builders/docker'
-    args: 
+    args:
       - 'build'
       - '-t'
       - 'us-central1-docker.pkg.dev/$PROJECT_ID/procounsellor-backend-repo/backend:$COMMIT_SHA'
       - '-f'
-      - 'ProCounsellor/Dockerfile'   # Explicitly specify the Dockerfile
-      - 'ProCounsellor/'             # Set the correct context directory
+      - 'ProCounsellor/Dockerfile'
+      - 'ProCounsellor/'
 
-  # Step 4: Push Docker image to Artifact Registry
+  # Step 4: Push Docker image
   - name: 'gcr.io/cloud-builders/docker'
-    args: 
+    args:
       - 'push'
       - 'us-central1-docker.pkg.dev/$PROJECT_ID/procounsellor-backend-repo/backend:$COMMIT_SHA'
 
   # Step 5: Deploy to Cloud Run
   - name: 'gcr.io/cloud-builders/gcloud'
-    args: 
+    args:
       - 'run'
       - 'deploy'
       - 'procounsellor-backend'
