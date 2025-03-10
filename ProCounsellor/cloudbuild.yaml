@@ -1,7 +1,8 @@
 steps:
-  # Step 1: Build the JAR file
   - name: 'gcr.io/cloud-builders/mvn'
     args: ['clean', 'package', '-DskipTests']
+    dir: 'ProCounsellor'  # Update if your project is inside a subdirectory
+
 
   # Step 2: Build Docker image
   - name: 'gcr.io/cloud-builders/docker'
