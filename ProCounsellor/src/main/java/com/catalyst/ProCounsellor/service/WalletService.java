@@ -31,14 +31,26 @@ public class WalletService {
     @Autowired
     private Firestore firestore;
     
-    @Value("${razorpay.key_id}")
-    private String keyId;
+    // @Value("${razorpay.key_id}")
+    // private String keyId;
 
-    @Value("${razorpay.key_secret}")
-    private String keySecret;
+    // @Value("${razorpay.key_secret}")
+    // private String keySecret;
+
+	private final String keyId;
+    	private final String keySecret;
     
     private final String USERS_COLLECTION = "users";
     private final String COUNSELLORS_COLLECTION = "counsellors";
+
+public WalletService() {
+        this.keyId = System.getenv("RAZORPAY_KEY_ID");
+        this.keySecret = System.getenv("RAZORPAY_KEY_SECRET");
+
+        if (keyId == null || keySecret == null) {
+            throw new IllegalStateException("Razorpay environment variables are not set properly!");
+        }
+    }
 
     public String createPaymentOrder(double amount, String receipt) throws RazorpayException {
         RazorpayClient razorpay = new RazorpayClient(keyId, keySecret);
