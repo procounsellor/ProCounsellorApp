@@ -16,7 +16,7 @@ steps:
     args:
       - 'build'
       - '-t'
-      - 'us-central1-docker.pkg.dev/$PROJECT_ID/procounsellor-backend-repo/backend:$COMMIT_SHA'
+      - 'asia-south1-docker.pkg.dev/$PROJECT_ID/procounsellor-backend-repo/backend:$COMMIT_SHA'
       - '-f'
       - 'ProCounsellor/Dockerfile'
       - 'ProCounsellor/'
@@ -25,7 +25,7 @@ steps:
   - name: 'gcr.io/cloud-builders/docker'
     args:
       - 'push'
-      - 'us-central1-docker.pkg.dev/$PROJECT_ID/procounsellor-backend-repo/backend:$COMMIT_SHA'
+      - 'asia-south1-docker.pkg.dev/$PROJECT_ID/procounsellor-backend-repo/backend:$COMMIT_SHA'
 
   # Step 5: Deploy to Cloud Run
   - name: 'gcr.io/cloud-builders/gcloud'
@@ -34,11 +34,11 @@ steps:
       - 'deploy'
       - 'procounsellor-backend'
       - '--image'
-      - 'us-central1-docker.pkg.dev/$PROJECT_ID/procounsellor-backend-repo/backend:$COMMIT_SHA'
+      - 'asia-south1-docker.pkg.dev/$PROJECT_ID/procounsellor-backend-repo/backend:$COMMIT_SHA'
       - '--platform'
       - 'managed'
       - '--region'
-      - 'us-central1'
+      - 'asia-south1'
       - '--allow-unauthenticated'
       - '--port=8080'
       - '--max-instances=3'
@@ -47,7 +47,7 @@ substitutions:
   _PROJECT_ID: "procounsellor-71824"
 
 images:
-  - 'us-central1-docker.pkg.dev/$PROJECT_ID/procounsellor-backend-repo/backend:$COMMIT_SHA'
+  - 'asia-south1-docker.pkg.dev/$PROJECT_ID/procounsellor-backend-repo/backend:$COMMIT_SHA'
 
 options:
   logging: CLOUD_LOGGING_ONLY
