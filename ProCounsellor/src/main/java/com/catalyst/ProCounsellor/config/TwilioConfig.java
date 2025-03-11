@@ -1,23 +1,26 @@
 package com.catalyst.ProCounsellor.config;
 
 import com.twilio.Twilio;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
-
 
 import javax.annotation.PostConstruct;
 
 @Configuration
 public class TwilioConfig {
 
-    @Value("${twilio.account.sid}")
-    private String accountSid;
+    private final String accountSid;
+    private final String authToken;
+    private final String verifyServiceSid;
 
-    @Value("${twilio.auth.token}")
-    private String authToken;
+    public TwilioConfig() {
+        this.accountSid = System.getenv("TWILIO_ACCOUNT_SID");
+        this.authToken = System.getenv("TWILIO_AUTH_TOKEN");
+        this.verifyServiceSid = System.getenv("TWILIO_VERIFY_SERVICE_SID");
 
-    @Value("${twilio.verify.service.sid}")
-    private String verifyServiceSid;
+        if (accountSid == null || authToken == null || verifyServiceSid == null) {
+            throw new IllegalStateException("Twilio environment variables are not set properly!");
+        }
+    }
 
     @PostConstruct
     public void initTwilio() {
