@@ -1,6 +1,8 @@
 package com.catalyst.ProCounsellor.service;
 
 import io.agora.media.RtcTokenBuilder2;
+
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import com.google.firebase.database.DatabaseReference;
@@ -13,14 +15,16 @@ import java.util.Date;
 
 @Service
 public class AgoraTokenService {
+	
+	@Autowired
+    private FirebaseDatabase firebaseDatabase;
 
     private String appId = System.getenv("AGORA_APP_ID");
     private String appCertificate = System.getenv("AGORA_APP_CERTIFICATE");
     private String tokenExpiry2 = System.getenv("AGORA_TOKEN_EXPIRY");
     private int tokenExpiry = Integer.parseInt(tokenExpiry2);
     
-    private final DatabaseReference callRef = FirebaseDatabase.getInstance()
-            .getReference("agora_call_signaling");
+    DatabaseReference callRef = firebaseDatabase.getReference("agora_call_signaling");
 
 
     public String generateToken(String channelName, int uid) {
