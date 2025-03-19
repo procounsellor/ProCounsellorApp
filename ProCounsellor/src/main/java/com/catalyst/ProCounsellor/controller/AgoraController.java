@@ -1,5 +1,6 @@
 package com.catalyst.ProCounsellor.controller;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
 import com.catalyst.ProCounsellor.service.AgoraTokenService;
@@ -7,13 +8,9 @@ import com.catalyst.ProCounsellor.service.AgoraTokenService;
 @RestController
 @RequestMapping("/api/agora")
 public class AgoraController {
-
-    private final AgoraTokenService agoraTokenService;
-
-    public AgoraController(AgoraTokenService agoraTokenService) {
-        this.agoraTokenService = agoraTokenService;
-    }
-
+	@Autowired
+    private AgoraTokenService agoraTokenService;
+	
     @GetMapping("/token")
     public String getAgoraToken(@RequestParam String channelName, @RequestParam int uid) {
         return agoraTokenService.generateToken(channelName, uid);
