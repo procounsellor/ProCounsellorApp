@@ -1,31 +1,29 @@
 package com.catalyst.ProCounsellor.service;
 
-import io.agora.media.RtcTokenBuilder2;
-
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
+import io.agora.media.RtcTokenBuilder2;
 import com.google.firebase.messaging.FirebaseMessaging;
 import com.google.firebase.messaging.Message;
 import com.google.firebase.messaging.Notification;
-
 import java.util.Date;
 
 @Service
 public class AgoraTokenService {
-	
-	@Autowired
-    private FirebaseDatabase firebaseDatabase;
+
+    private final FirebaseDatabase firebaseDatabase;
+    private final DatabaseReference callRef;
 
     private String appId = System.getenv("AGORA_APP_ID");
     private String appCertificate = System.getenv("AGORA_APP_CERTIFICATE");
     private String tokenExpiry2 = System.getenv("AGORA_TOKEN_EXPIRY");
     private int tokenExpiry = Integer.parseInt(tokenExpiry2);
-    
-    DatabaseReference callRef = firebaseDatabase.getReference("agora_call_signaling");
 
+    public AgoraTokenService(FirebaseDatabase firebaseDatabase) {
+        this.firebaseDatabase = firebaseDatabase;
+        this.callRef = firebaseDatabase.getReference("agora_call_signaling");
+    }
 
     public String generateToken(String channelName, int uid) {
         RtcTokenBuilder2 tokenBuilder = new RtcTokenBuilder2();
@@ -36,17 +34,15 @@ public class AgoraTokenService {
                 appCertificate,
                 channelName,
                 uid,
-                RtcTokenBuilder2.Role.ROLE_PUBLISHER, // ✅ Corrected Role
+                RtcTokenBuilder2.Role.ROLE_PUBLISHER,
                 expireTimestamp,
                 expireTimestamp
         );
     }
-    
+
     public void sendCallNotification(String receiverFCMToken, String senderName, String channelId, String receiverId) {
-        // ✅ Save active call in Firebase Realtime Database
         callRef.child(receiverId).setValueAsync(new CallSession(senderName, channelId));
 
-        // ✅ Send push notification
         Notification notification = Notification.builder()
                 .setTitle("Incoming Call")
                 .setBody(senderName + " is calling you...")
@@ -68,12 +64,11 @@ public class AgoraTokenService {
         }
     }
 
-    // ✅ CallSession Model for Firebase
     static class CallSession {
         public String callerName;
         public String channelId;
 
-        public CallSession() {} // Required for Firebase
+        public CallSession() {}
         public CallSession(String callerName, String channelId) {
             this.callerName = callerName;
             this.channelId = channelId;
