@@ -43,25 +43,25 @@ public class AgoraTokenService {
     public void sendCallNotification(String receiverFCMToken, String senderName, String channelId, String receiverId) {
         callRef.child(receiverId).setValueAsync(new CallSession(senderName, channelId));
 
-        Notification notification = Notification.builder()
-                .setTitle("Incoming Call")
-                .setBody(senderName + " is calling you...")
-                .build();
-
-        Message message = Message.builder()
-                .setNotification(notification)
-                .putData("type", "incoming_call")
-                .putData("channelId", channelId)
-                .putData("callerName", senderName)
-                .setToken(receiverFCMToken)
-                .build();
-
-        try {
-            FirebaseMessaging.getInstance().send(message);
-            System.out.println("✅ Call Notification Sent!");
-        } catch (Exception e) {
-            System.err.println("❌ Error sending notification: " + e.getMessage());
-        }
+//        Notification notification = Notification.builder()
+//                .setTitle("Incoming Call")
+//                .setBody(senderName + " is calling you...")
+//                .build();
+//
+//        Message message = Message.builder()
+//                .setNotification(notification)
+//                .putData("type", "incoming_call")
+//                .putData("channelId", channelId)
+//                .putData("callerName", senderName)
+//                .setToken(receiverFCMToken)
+//                .build();
+//
+//        try {
+//            FirebaseMessaging.getInstance().send(message);
+//            System.out.println("✅ Call Notification Sent!");
+//        } catch (Exception e) {
+//            System.err.println("❌ Error sending notification: " + e.getMessage());
+//        }
     }
 
     static class CallSession {
