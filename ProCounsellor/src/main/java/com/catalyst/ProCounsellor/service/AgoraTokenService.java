@@ -40,8 +40,8 @@ public class AgoraTokenService {
         );
     }
 
-    public void sendCallNotification(String receiverFCMToken, String senderName, String channelId, String receiverId) {
-        callRef.child(receiverId).setValueAsync(new CallSession(senderName, channelId));
+    public void sendCallNotification(String receiverFCMToken, String senderName, String channelId, String receiverId, String callType) {
+        callRef.child(receiverId).setValueAsync(new CallSession(senderName, channelId, callType));
 
 //        Notification notification = Notification.builder()
 //                .setTitle("Incoming Call")
@@ -67,11 +67,13 @@ public class AgoraTokenService {
     static class CallSession {
         public String callerName;
         public String channelId;
+        public String callType;
 
         public CallSession() {}
-        public CallSession(String callerName, String channelId) {
+        public CallSession(String callerName, String channelId, String callType) {
             this.callerName = callerName;
             this.channelId = channelId;
+            this.callType = callType;
         }
     }
 }
