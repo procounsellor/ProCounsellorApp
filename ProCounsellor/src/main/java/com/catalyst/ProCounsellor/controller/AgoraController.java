@@ -22,7 +22,8 @@ public class AgoraController {
             request.getReceiverFCMToken(), 
             request.getSenderName(), 
             request.getChannelId(),
-            request.getReceiverId()
+            request.getReceiverId(),
+            request.getCallType()
         );
         return "✅ Notification sent successfully!";
     }
@@ -33,6 +34,7 @@ public class AgoraController {
         private String senderName;
         private String channelId;
         private String receiverId;
+        private String callType;
 
         // Getters & Setters
         public String getReceiverFCMToken() { return receiverFCMToken; }
@@ -46,5 +48,8 @@ public class AgoraController {
         
         public String getReceiverId() { return receiverId; }
         public void setReceiverId(String receiverId) { this.receiverId = receiverId; }
+
+        public String getCallType() { return callType; }
+        public void setcallType(String callType) { this.callType = callType; }
     }
 }
