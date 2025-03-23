@@ -16,6 +16,23 @@ public class AgoraController {
         return agoraTokenService.generateToken(channelName, uid);
     }
     
+    @PostMapping("/{callId}/picked")
+    public void pickedCall(@PathVariable String callId) {
+    	agoraTokenService.pickedCall(callId);
+    }
+
+    //Updates endTime, status, and calculates duration.
+    @PostMapping("/{callId}/end")
+    public void endCall(@PathVariable String callId) {
+    	agoraTokenService.endCall(callId);
+    }
+    
+    @PostMapping("/{callId}/declined")
+    public void declinedCall(@PathVariable String callId) {
+    	agoraTokenService.declinedCall(callId);
+    }
+    
+    //start call
     @PostMapping("/send")
     public String sendCallNotification(@RequestBody CallNotificationRequest request) {
         agoraTokenService.sendCallNotification(

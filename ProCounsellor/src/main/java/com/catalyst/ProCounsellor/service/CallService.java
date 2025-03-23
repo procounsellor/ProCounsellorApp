@@ -82,6 +82,7 @@ public class CallService {
             }
         });
     }
+    
     public void declinedCall(String callId) {
         DatabaseReference callRef = firebaseDatabase.getReference("calls").child(callId);
  
