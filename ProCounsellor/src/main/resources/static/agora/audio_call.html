@@ -58,26 +58,36 @@
     let isMuted = false;
     let isSpeakerOn = true; // default
 
-    async function startAudioCall() {
-      await client.join("118a5a8d61b242fdab4fc18f7f6c5479", channelId, token, uid);
-      localAudioTrack = await AgoraRTC.createMicrophoneAudioTrack();
-      await client.publish([localAudioTrack]);
+	async function startAudioCall() {
+	  try {
+	    await client.join("118a5a8d61b242fdab4fc18f7f6c5479", channelId, token, uid);
+	    console.log("✅ Joined Agora channel");
 
-      document.getElementById('status').innerText = "Call in Progress";
+	    localAudioTrack = await AgoraRTC.createMicrophoneAudioTrack();
+	    await client.publish([localAudioTrack]);
 
-      client.on("user-published", async (user, mediaType) => {
-        await client.subscribe(user, mediaType);
-        if (mediaType === "audio") {
-          remoteAudioTrack = user.audioTrack;
-          remoteAudioTrack.play();
-        }
-      });
+	    console.log("🎙️ Published local audio");
 
-      client.on("user-unpublished", () => {
-        remoteAudioTrack && remoteAudioTrack.stop();
-        document.getElementById('status').innerText = "User left the call";
-      });
-    }
+	    document.getElementById('status').innerText = "Call in Progress";
+
+	    client.on("user-published", async (user, mediaType) => {
+	      await client.subscribe(user, mediaType);
+	      if (mediaType === "audio") {
+	        remoteAudioTrack = user.audioTrack;
+	        remoteAudioTrack.play();
+	        console.log("🔊 Remote user audio playing");
+	      }
+	    });
+
+	    client.on("user-unpublished", () => {
+	      if (remoteAudioTrack) remoteAudioTrack.stop();
+	      document.getElementById('status').innerText = "User left the call";
+	    });
+	  } catch (err) {
+	    console.error("❌ Agora error:", err);
+	    document.getElementById('status').innerText = "Connection failed!";
+	  }
+	}
 
     document.getElementById("mute").onclick = () => {
       isMuted = !isMuted;
