@@ -114,7 +114,7 @@ public class AgoraTokenService {
             .setApnsConfig(apnsConfig) // ✅ iOS-specific config attached
             .build();
 
-        // Step 5: Send via Firebase Admin SDK
+        // Step 5: Send via Firebase Admin SDK (now admin have the access)
         try {
             FirebaseMessaging.getInstance().send(message);
             System.out.println("✅ Call Notification Sent!");
