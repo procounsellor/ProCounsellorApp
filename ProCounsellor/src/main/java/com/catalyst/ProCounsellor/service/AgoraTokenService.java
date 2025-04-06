@@ -80,7 +80,7 @@ public class AgoraTokenService {
         callRef.child("pickedTime").setValueAsync(pickedTimeMillis);
     }
 
-    //Responsible for starting the call
+    //Responsible for starting the call and sending the notifications.
     public void sendCallNotification(String receiverFCMToken, String senderName, String channelId, String receiverId, String callType) {
         // Step 1: Save signaling data to Firebase Realtime DB
         agoraCallSignalling.child(receiverId).setValueAsync(new CallSession(senderName, channelId, callType));
