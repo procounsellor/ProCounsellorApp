@@ -15,6 +15,9 @@ import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.database.ValueEventListener;
 
 import io.agora.media.RtcTokenBuilder2;
+
+import com.google.firebase.messaging.ApnsConfig;
+import com.google.firebase.messaging.Aps;
 import com.google.firebase.messaging.FirebaseMessaging;
 import com.google.firebase.messaging.Message;
 import com.google.firebase.messaging.Notification;
@@ -27,7 +30,7 @@ import java.util.concurrent.TimeUnit;
 public class AgoraTokenService {
 
     private final FirebaseDatabase firebaseDatabase;
-    private final DatabaseReference callRef;
+    private final DatabaseReference agoraCallSignalling;
     @Autowired
 	private SharedService sharedService;
 
@@ -38,7 +41,7 @@ public class AgoraTokenService {
 
     public AgoraTokenService(FirebaseDatabase firebaseDatabase) {
         this.firebaseDatabase = firebaseDatabase;
-        this.callRef = firebaseDatabase.getReference("agora_call_signaling");
+        this.agoraCallSignalling = firebaseDatabase.getReference("agora_call_signaling");
     }
 
     public String generateToken(String channelName, int uid) {
@@ -79,28 +82,45 @@ public class AgoraTokenService {
 
     //Responsible for starting the call
     public void sendCallNotification(String receiverFCMToken, String senderName, String channelId, String receiverId, String callType) {
-        callRef.child(receiverId).setValueAsync(new CallSession(senderName, channelId, callType));
-        startCall(channelId,senderName, receiverId, callType);
+        // Step 1: Save signaling data to Firebase Realtime DB
+        agoraCallSignalling.child(receiverId).setValueAsync(new CallSession(senderName, channelId, callType));
+        startCall(channelId, senderName, receiverId, callType);
 
-//        Notification notification = Notification.builder()
-//                .setTitle("Incoming Call")
-//                .setBody(senderName + " is calling you...")
-//                .build();
-//
-//        Message message = Message.builder()
-//                .setNotification(notification)
-//                .putData("type", "incoming_call")
-//                .putData("channelId", channelId)
-//                .putData("callerName", senderName)
-//                .setToken(receiverFCMToken)
-//                .build();
-//
-//        try {
-//            FirebaseMessaging.getInstance().send(message);
-//            System.out.println("✅ Call Notification Sent!");
-//        } catch (Exception e) {
-//            System.err.println("❌ Error sending notification: " + e.getMessage());
-//        }
+        // Step 2: Build notification object (optional visual alert for Android & foreground iOS)
+        Notification notification = Notification.builder()
+            .setTitle("Incoming Call")
+            .setBody(senderName + " is calling you...")
+            .build();
+
+        // Step 3: Build APNs (iOS-specific) config
+        ApnsConfig apnsConfig = ApnsConfig.builder()
+            .putHeader("apns-priority", "10") // 🔥 Important for immediate delivery
+            .setAps(
+                Aps.builder()
+                    .setContentAvailable(true) // 👈 Enables background/terminated delivery
+                    .setSound("default")       // 🔔 Plays sound
+                    .build()
+            )
+            .build();
+
+        // Step 4: Build final FCM message
+        Message message = Message.builder()
+            .setToken(receiverFCMToken)
+            .setNotification(notification) // Visual part (optional for iOS)
+            .putData("type", "incoming_call")
+            .putData("channelId", channelId)
+            .putData("callerName", senderName)
+            .putData("callType", callType)
+            .setApnsConfig(apnsConfig) // ✅ iOS-specific config attached
+            .build();
+
+        // Step 5: Send via Firebase Admin SDK
+        try {
+            FirebaseMessaging.getInstance().send(message);
+            System.out.println("✅ Call Notification Sent!");
+        } catch (Exception e) {
+            System.err.println("❌ Error sending notification: " + e.getMessage());
+        }
     }
     
     public void endCall(String callId) {
@@ -129,7 +149,7 @@ public class AgoraTokenService {
                             callRef.child("missedCallStatusSeen").setValueAsync(false);                       }
  
                         try {
-                            saveCallDetailsToUserAndCounsellor(callHistory, callHistory.getCallerId(), callHistory.getReceiverId());
+                        	saveCallDetailsToCallerAndReceiver(callHistory, callHistory.getCallerId(), callHistory.getReceiverId());
                         } catch (Exception e) {
                             System.err.println("Error saving call details: " + e.getMessage());
                         }
@@ -171,7 +191,7 @@ public class AgoraTokenService {
                         }
  
                         try {
-                            saveCallDetailsToUserAndCounsellor(callHistory, callHistory.getCallerId(), callHistory.getReceiverId());
+                        	saveCallDetailsToCallerAndReceiver(callHistory, callHistory.getCallerId(), callHistory.getReceiverId());
                         } catch (Exception e) {
                             System.err.println("Error saving call details: " + e.getMessage());
                         }
@@ -189,12 +209,12 @@ public class AgoraTokenService {
     }
  
     
-    public void saveCallDetailsToUserAndCounsellor(CallHistory callHistory, String callerId, String receiverId) {
+    public void saveCallDetailsToCallerAndReceiver(CallHistory callHistory, String callerId, String receiverId) {
         try {
             DocumentSnapshot docRef = FirestoreClient.getFirestore()
                 .collection("users").document(callerId).get().get();
  
-            boolean isCallerUser = docRef.exists(); // If exists, caller is a user
+            boolean isCallerUser = docRef.exists(); // If
  
             User user = isCallerUser ? sharedService.getUserById(callerId) : sharedService.getUserById(receiverId);
             Counsellor counsellor = isCallerUser ? sharedService.getCounsellorById(receiverId) : sharedService.getCounsellorById(callerId);
