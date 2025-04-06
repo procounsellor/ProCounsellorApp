@@ -41,4 +41,5 @@ public class Counsellor {
     //to be verified by admin;
     private boolean isVerified;
     private StateType state;
+    private String fcmToken;
 }

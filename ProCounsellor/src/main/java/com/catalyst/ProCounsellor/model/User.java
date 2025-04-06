@@ -32,6 +32,7 @@ public class User {
     private List<String> userReviewIds;
     private List<String> chatIdsCreatedForUser;
     private List<String> languagesKnow;
+    private String fcmToken;
 }
 
        
