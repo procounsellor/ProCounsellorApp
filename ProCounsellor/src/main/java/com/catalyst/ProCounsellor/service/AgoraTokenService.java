@@ -16,6 +16,8 @@ import com.google.firebase.database.ValueEventListener;
 
 import io.agora.media.RtcTokenBuilder2;
 
+import com.google.firebase.messaging.AndroidConfig;
+import com.google.firebase.messaging.AndroidNotification;
 import com.google.firebase.messaging.ApnsConfig;
 import com.google.firebase.messaging.Aps;
 import com.google.firebase.messaging.FirebaseMessaging;
@@ -80,41 +82,49 @@ public class AgoraTokenService {
         callRef.child("pickedTime").setValueAsync(pickedTimeMillis);
     }
 
-    //Responsible for starting the call and sending the notifications.
     public void sendCallNotification(String receiverFCMToken, String senderName, String channelId, String receiverId, String callType) {
         // Step 1: Save signaling data to Firebase Realtime DB
         agoraCallSignalling.child(receiverId).setValueAsync(new CallSession(senderName, channelId, callType));
         startCall(channelId, senderName, receiverId, callType);
 
-        // Step 2: Build notification object (optional visual alert for Android & foreground iOS)
+        // Step 2: Build notification object
         Notification notification = Notification.builder()
             .setTitle("Incoming Call")
             .setBody(senderName + " is calling you...")
             .build();
 
-        // Step 3: Build APNs (iOS-specific) config
+        // Step 3: Build APNs config (iOS)
         ApnsConfig apnsConfig = ApnsConfig.builder()
-            .putHeader("apns-priority", "10") // 🔥 Important for immediate delivery
+            .putHeader("apns-priority", "10")
             .setAps(
                 Aps.builder()
-                    .setContentAvailable(true) // 👈 Enables background/terminated delivery
-                    .setSound("default")       // 🔔 Plays sound
+                    .setSound("default")
+                    .setContentAvailable(true)
                     .build()
             )
             .build();
 
-        // Step 4: Build final FCM message
+        // ✅ Step 4: Build Android config
+        AndroidConfig androidConfig = AndroidConfig.builder()
+            .setPriority(AndroidConfig.Priority.HIGH)
+            .setNotification(AndroidNotification.builder()
+                .setSound("default")
+                .setChannelId("high_importance_channel") // ✅ This must match client channel ID
+                .build())
+            .build();
+
+        // Step 5: Build and send final message
         Message message = Message.builder()
             .setToken(receiverFCMToken)
-            .setNotification(notification) // Visual part (optional for iOS)
+            .setNotification(notification)
             .putData("type", "incoming_call")
             .putData("channelId", channelId)
             .putData("callerName", senderName)
             .putData("callType", callType)
-            .setApnsConfig(apnsConfig) // ✅ iOS-specific config attached
+            .setApnsConfig(apnsConfig)
+            .setAndroidConfig(androidConfig) // ✅ Added for Android
             .build();
 
-        // Step 5: Send via Firebase Admin SDK (now admin have the access)
         try {
             FirebaseMessaging.getInstance().send(message);
             System.out.println("✅ Call Notification Sent!");
@@ -122,7 +132,7 @@ public class AgoraTokenService {
             System.err.println("❌ Error sending notification: " + e.getMessage());
         }
     }
-    
+
     public void endCall(String callId) {
         DatabaseReference callRef = firebaseDatabase.getReference("calls").child(callId);
  
