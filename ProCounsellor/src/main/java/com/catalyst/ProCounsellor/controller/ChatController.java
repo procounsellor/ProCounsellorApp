@@ -34,6 +34,17 @@ public class ChatController {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error starting chat.");
         }
     }
+    @PostMapping("/start-chat-userTouser")
+    public ResponseEntity<?> startChatuserTouser(@RequestParam String userId, @RequestParam String userId2) {
+        try {
+            String chatId = chatService.startChatUserToUser(userId, userId2);
+            return ResponseEntity.ok(Collections.singletonMap("chatId", chatId));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error starting chat.");
+        }
+    }
 
     @PostMapping("/{chatId}/messages")
     public ResponseEntity<?> sendMessage(@PathVariable String chatId, @RequestBody MessageRequest messageRequest) {
@@ -80,6 +91,14 @@ public class ChatController {
             @RequestParam String userId,
             @RequestParam String counsellorId) throws ExecutionException, InterruptedException {
         boolean exists = chatService.doesChatExist(userId, counsellorId);
+        return ResponseEntity.ok(exists);
+    }
+    
+    @GetMapping("/existsUserToUser")
+    public ResponseEntity<Boolean> checkChatExistsUserToUser(
+            @RequestParam String userId,
+            @RequestParam String userId2) throws ExecutionException, InterruptedException {
+        boolean exists = chatService.doesChatExistUserToUser(userId, userId2);
         return ResponseEntity.ok(exists);
     }
     

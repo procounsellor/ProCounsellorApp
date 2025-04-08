@@ -16,6 +16,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -81,23 +83,108 @@ public class ChatService {
         DocumentReference newChatRef = firestore.collection("chats").document();
         newChatRef.set(chatData).get();
         
-        addChatIdToUser(userDocRef, newChatRef.getId());
-        addChatIdToCounsellor(counsellorDocRef, newChatRef.getId());
+        addChatIdToUser(userDocRef, newChatRef.getId(), userId, counsellorId);
+        addChatIdToCounsellor(counsellorDocRef, newChatRef.getId(), counsellorId, userId);
         
         return newChatRef.getId();
     }
+    
+//    public String startChatUserToUser(String userId, String userId2) throws ExecutionException, InterruptedException {
+//        // Step 1: Validate userId exists in the users table (Firestore)
+//        DocumentReference userDocRef = firestore.collection("users").document(userId);
+//        DocumentSnapshot userSnapshot = userDocRef.get().get();
+//        if (!userSnapshot.exists()) {
+//            throw new IllegalArgumentException("Invalid userId: User does not exist.");
+//        }
+//
+//        // Step 2: Validate use2 exists in the counsellors table (Firestore)
+//        DocumentReference user2DocRef = firestore.collection("users").document(userId2);
+//        DocumentSnapshot user2Snapshot = user2DocRef.get().get();
+//        if (!user2Snapshot.exists()) {
+//            throw new IllegalArgumentException("Invalid user: user does not exist.");
+//        }
+//
+//        // Step 3: Check if a chat already exists between the user and counselor (Firestore)
+//        ApiFuture<QuerySnapshot> existingChatQuery = firestore.collection("chats")
+//                .whereEqualTo("userId", userId)
+//                .whereEqualTo("userId2", userId2)
+//                .get();
+//
+//        QuerySnapshot querySnapshot = existingChatQuery.get();
+//        if (!querySnapshot.isEmpty()) {
+//            // A chat already exists, return the existing chatId
+//            return querySnapshot.getDocuments().get(0).getId();
+//        }
+//
+//        // Step 4: Create a new chat if it does not exist (Firestore)
+//        Map<String, Object> chatData = new HashMap<>();
+//        chatData.put("userId", userId);
+//        chatData.put("userId2", userId2);
+//        chatData.put("createdAt", FieldValue.serverTimestamp());
+//
+//        DocumentReference newChatRef = firestore.collection("chats").document();
+//        newChatRef.set(chatData).get();
+//        
+//        addChatIdToUser(userDocRef, newChatRef.getId(), userId, userId2);
+//        addChatIdToUser(user2DocRef, newChatRef.getId(), userId2, userId);
+//        
+//        return newChatRef.getId();
+//    }
+    
+    public String startChatUserToUser(String userId, String userId2) throws ExecutionException, InterruptedException {
+        DocumentReference userDocRef = firestore.collection("users").document(userId);
+        DocumentSnapshot userSnapshot = userDocRef.get().get();
+        if (!userSnapshot.exists()) {
+            throw new IllegalArgumentException("Invalid userId: User does not exist.");
+        }
 
-    private void addChatIdToCounsellor(DocumentReference counsellorDocRef, String newChatId) throws InterruptedException, ExecutionException {
+        DocumentReference user2DocRef = firestore.collection("users").document(userId2);
+        DocumentSnapshot user2Snapshot = user2DocRef.get().get();
+        if (!user2Snapshot.exists()) {
+            throw new IllegalArgumentException("Invalid user: userId2 does not exist.");
+        }
+
+        // ✅ Step 3: Use sorted participants list to check existing chats
+        List<String> participants = Arrays.asList(userId, userId2);
+        Collections.sort(participants);
+
+        ApiFuture<QuerySnapshot> existingChatQuery = firestore.collection("chats")
+            .whereEqualTo("participants", participants)
+            .get();
+
+        QuerySnapshot querySnapshot = existingChatQuery.get();
+        if (!querySnapshot.isEmpty()) {
+            return querySnapshot.getDocuments().get(0).getId();
+        }
+
+        // ✅ Step 4: Create new chat
+        Map<String, Object> chatData = new HashMap<>();
+        chatData.put("userId", userId);
+        chatData.put("userId2", userId2);
+        chatData.put("participants", participants); // ✅ Added sorted participant list
+        chatData.put("createdAt", FieldValue.serverTimestamp());
+
+        DocumentReference newChatRef = firestore.collection("chats").document();
+        newChatRef.set(chatData).get();
+
+        addChatIdToUser(userDocRef, newChatRef.getId(), userId, userId2);
+        addChatIdToUser(user2DocRef, newChatRef.getId(), userId2, userId);
+
+        return newChatRef.getId();
+    }
+
+
+    private void addChatIdToCounsellor(DocumentReference counsellorDocRef, String newChatId, String user1, String user2) throws InterruptedException, ExecutionException {
     	ApiFuture<DocumentSnapshot> future = counsellorDocRef.get();
         DocumentSnapshot document = future.get();
-        
+       
         if (document.exists()) {
             // Retrieve the existing chatIdsCreatedForCounsellor list
-        	List<String> chatIds;
+        	List<Map<String, String>> chatIds;
 
             if (document.exists()) {
                 // Retrieve existing list or initialize if null
-                chatIds = (List<String>) document.get("chatIdsCreatedForCounsellor");
+                chatIds = (List<Map<String, String>>) document.get("chatIdsCreatedForCounsellor");
                 if (chatIds == null) {
                     chatIds = new ArrayList<>();
                 }
@@ -108,7 +195,11 @@ public class ChatService {
             
             // Add the new chat ID if it does not already exist
             if (!chatIds.contains(newChatId)) {
-                chatIds.add(newChatId);
+            	Map<String, String> m = new HashMap<>();
+            	m.put("chatId",newChatId );
+            	m.put("user1", user1);
+            	m.put("user2", user2);
+                chatIds.add(m);
 
                 // Update Firestore document with the new list
                 ApiFuture<WriteResult> writeResult = counsellorDocRef.update("chatIdsCreatedForCounsellor", chatIds);
@@ -121,17 +212,17 @@ public class ChatService {
         }
 	}
 
-	private void addChatIdToUser(DocumentReference userDocRef, String newChatId) throws InterruptedException, ExecutionException {
+	private void addChatIdToUser(DocumentReference userDocRef, String newChatId, String user1, String user2) throws InterruptedException, ExecutionException {
 		ApiFuture<DocumentSnapshot> future = userDocRef.get();
         DocumentSnapshot document = future.get();
         
         if (document.exists()) {
             // Retrieve the existing chatIdsCreatedForCounsellor list
-        	List<String> chatIds;
+        	List<Map<String, String>> chatIds;
 
             if (document.exists()) {
                 // Retrieve existing list or initialize if null
-                chatIds = (List<String>) document.get("chatIdsCreatedForUser");
+                chatIds = (List<Map<String, String>>) document.get("chatIdsCreatedForUser");
                 if (chatIds == null) {
                     chatIds = new ArrayList<>();
                 }
@@ -142,7 +233,11 @@ public class ChatService {
 
             // Add the new chat ID if it does not already exist
             if (!chatIds.contains(newChatId)) {
-                chatIds.add(newChatId);
+            	Map<String, String> m = new HashMap<>();
+            	m.put("chatId",newChatId );
+            	m.put("user1", user1);
+            	m.put("user2", user2);
+                chatIds.add(m);
 
                 // Update Firestore document with the new list
                 ApiFuture<WriteResult> writeResult = userDocRef.update("chatIdsCreatedForUser", chatIds);
@@ -166,9 +261,12 @@ public class ChatService {
         // Get the userId and counselorId from the chat document (Firestore)
         String storedUserId = chatSnapshot.getString("userId");
         String storedCounselorId = chatSnapshot.getString("counsellorId");
+        
+        
+        String storedUserId2 = chatSnapshot.getString("userId2");
 
         // Validate that the senderId is either the userId or counselorId
-        if (!messageRequest.getSenderId().equals(storedUserId) && !messageRequest.getSenderId().equals(storedCounselorId)) {
+        if (!messageRequest.getSenderId().equals(storedUserId) && !messageRequest.getSenderId().equals(storedCounselorId) &&!messageRequest.getSenderId().equals(storedUserId2)) {
             throw new IllegalAccessException("You are not authorized to send a message in this chat.");
         }
 
@@ -197,9 +295,9 @@ public class ChatService {
 
         String storedUserId = chatSnapshot.getString("userId");
         String storedCounselorId = chatSnapshot.getString("counsellorId");
-
+        String storedUserId2 = chatSnapshot.getString("userId2");
         // Validate sender
-        if (!senderId.equals(storedUserId) && !senderId.equals(storedCounselorId)) {
+        if (!senderId.equals(storedUserId) && !senderId.equals(storedCounselorId) &&!senderId.equals(storedUserId2)) {
             throw new IllegalAccessException("You are not authorized to send a file in this chat.");
         }
 
@@ -273,6 +371,16 @@ public class ChatService {
 
         // Check if any document matches the query
         return !query.get().getDocuments().isEmpty();
+    }
+    
+    public boolean doesChatExistUserToUser(String userId, String userId2) throws ExecutionException, InterruptedException {
+        ApiFuture<QuerySnapshot> query = firestore.collection("chats")
+                .whereEqualTo("userId", userId)
+                .whereEqualTo("userId2", userId2)
+                .get();
+
+        // Check if any document matches the query
+        return !query.get().getDocuments() .isEmpty();
     }
     
     public List<Counsellor> getCounsellorsForUser(String userId) throws ExecutionException, InterruptedException {

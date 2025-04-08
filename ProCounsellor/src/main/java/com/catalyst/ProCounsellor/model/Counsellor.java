@@ -1,6 +1,7 @@
 package com.catalyst.ProCounsellor.model;
 
 import java.util.List;
+import java.util.Map;
 
 import com.google.cloud.firestore.annotation.DocumentId;
 
@@ -26,7 +27,7 @@ public class Counsellor {
     private List<ActivityLog> activityLog;
     private List<CallHistory> callHistory;
     private AllowedStates stateOfCounsellor;
-    private List<String> chatIdsCreatedForCounsellor;
+    private List<Map<String,String>> chatIdsCreatedForCounsellor;
     private Double ratePerYear;
     private List<Courses> expertise; //align with user's interested course
     private Integer noOfClients;
