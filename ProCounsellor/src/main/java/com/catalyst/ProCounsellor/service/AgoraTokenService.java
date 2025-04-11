@@ -87,35 +87,42 @@ public class AgoraTokenService {
         agoraCallSignalling.child(receiverId).setValueAsync(new CallSession(senderName, channelId, callType));
         startCall(channelId, senderName, receiverId, callType);
 
-        // ✅ Step 2: Build APNs config (for iOS) — data-only push
+        // Step 2: Build notification object
+        Notification notification = Notification.builder()
+            .setTitle("Incoming Call")
+            .setBody(senderName + " is calling you...")
+            .build();
+
+        // Step 3: Build APNs config (iOS)
         ApnsConfig apnsConfig = ApnsConfig.builder()
-            .putHeader("apns-priority", "10") // High priority for immediate delivery
+            .putHeader("apns-priority", "10")
             .setAps(
                 Aps.builder()
-                    .setSound("default") // Optional
-                    .setContentAvailable(true) // ✅ Required for background
+                    .setSound("default")
+                    .setContentAvailable(true)
                     .build()
             )
             .build();
 
-        // ✅ Step 3: Build Android config
+        // ✅ Step 4: Build Android config
         AndroidConfig androidConfig = AndroidConfig.builder()
             .setPriority(AndroidConfig.Priority.HIGH)
             .setNotification(AndroidNotification.builder()
                 .setSound("default")
-                .setChannelId("high_importance_channel") // Must match client channel ID
+                .setChannelId("high_importance_channel") // ✅ This must match client channel ID
                 .build())
             .build();
 
-        // ✅ Step 4: Build data-only message
+        // Step 5: Build and send final message
         Message message = Message.builder()
             .setToken(receiverFCMToken)
+            .setNotification(notification)
             .putData("type", "incoming_call")
             .putData("channelId", channelId)
             .putData("callerName", senderName)
             .putData("callType", callType)
             .setApnsConfig(apnsConfig)
-            .setAndroidConfig(androidConfig)
+            .setAndroidConfig(androidConfig) // ✅ Added for Android
             .build();
 
         try {
