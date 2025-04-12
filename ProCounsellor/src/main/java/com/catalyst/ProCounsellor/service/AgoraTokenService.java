@@ -116,7 +116,7 @@ public class AgoraTokenService {
         // Step 5: Build and send final message
         Message message = Message.builder()
             .setToken(receiverFCMToken)
-//            .setNotification(notification)
+            .setNotification(notification)
             .putData("type", "incoming_call")
             .putData("channelId", channelId)
             .putData("callerName", senderName)
