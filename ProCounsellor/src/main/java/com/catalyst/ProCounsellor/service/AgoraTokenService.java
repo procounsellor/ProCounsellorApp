@@ -6,6 +6,10 @@ import org.springframework.stereotype.Service;
 import com.catalyst.ProCounsellor.model.CallHistory;
 import com.catalyst.ProCounsellor.model.Counsellor;
 import com.catalyst.ProCounsellor.model.User;
+import com.eatthepath.pushy.apns.ApnsClient;
+import com.eatthepath.pushy.apns.ApnsClientBuilder;
+import com.eatthepath.pushy.apns.util.SimpleApnsPayloadBuilder;
+import com.eatthepath.pushy.apns.util.SimpleApnsPushNotification;
 import com.google.cloud.firestore.DocumentSnapshot;
 import com.google.firebase.cloud.FirestoreClient;
 import com.google.firebase.database.DataSnapshot;
@@ -24,9 +28,13 @@ import com.google.firebase.messaging.FirebaseMessaging;
 import com.google.firebase.messaging.Message;
 import com.google.firebase.messaging.Notification;
 
+import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.concurrent.TimeUnit;
+
+import javax.net.ssl.SSLException;
 
 @Service
 public class AgoraTokenService {
@@ -82,7 +90,7 @@ public class AgoraTokenService {
         callRef.child("pickedTime").setValueAsync(pickedTimeMillis);
     }
 
-    public void sendCallNotification(String receiverFCMToken, String senderName, String channelId, String receiverId, String callType) {
+    public void sendFcmNotification(String receiverFCMToken, String senderName, String channelId, String receiverId, String callType) {
         // Step 1: Save signaling data to Firebase Realtime DB
         agoraCallSignalling.child(receiverId).setValueAsync(new CallSession(senderName, channelId, callType));
         startCall(channelId, senderName, receiverId, callType);
@@ -116,7 +124,7 @@ public class AgoraTokenService {
         // Step 5: Build and send final message
         Message message = Message.builder()
             .setToken(receiverFCMToken)
-            .setNotification(notification)
+//            .setNotification(notification)
             .putData("type", "incoming_call")
             .putData("channelId", channelId)
             .putData("callerName", senderName)
@@ -132,6 +140,40 @@ public class AgoraTokenService {
             System.err.println("❌ Error sending notification: " + e.getMessage());
         }
     }
+    
+    public void sendVoipPushNotification(String voipToken, String callerName, String channelId, String callType) throws SSLException, IOException {
+        ApnsClient client = new ApnsClientBuilder()
+            .setApnsServer(ApnsClientBuilder.DEVELOPMENT_APNS_HOST)
+            .setClientCredentials(
+            	    getClass().getClassLoader().getResourceAsStream("static/voip_cert.p12"),
+            	    "ProCounsellor@2024"
+            	)
+            .build();
+
+        String payload = new SimpleApnsPayloadBuilder()
+            .setContentAvailable(true)
+            .setSound("default")
+            .addCustomProperty("callerName", callerName)
+            .addCustomProperty("channelId", channelId)
+            .addCustomProperty("callType", callType)
+            .addCustomProperty("type", "incoming_call")
+            .build();
+
+        SimpleApnsPushNotification push = new SimpleApnsPushNotification(
+            voipToken,
+            "com.your.bundle.id.voip",
+            payload
+        );
+
+        client.sendNotification(push).whenComplete((response, cause) -> {
+            if (response != null && response.isAccepted()) {
+                System.out.println("✅ VoIP notification sent successfully!");
+            } else {
+                System.err.println("❌ VoIP push failed: " + cause.getMessage());
+            }
+        });
+    }
+
 
     public void endCall(String callId) {
         DatabaseReference callRef = firebaseDatabase.getReference("calls").child(callId);

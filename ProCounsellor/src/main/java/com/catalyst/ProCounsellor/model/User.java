@@ -34,6 +34,7 @@ public class User {
     private List<Map<String,String>> chatIdsCreatedForUser;
     private List<String> languagesKnow;
     private String fcmToken;
+    private String voipToken;
 }
 
        
