@@ -1,9 +1,5 @@
 package com.catalyst.ProCounsellor.controller;
 
-import java.io.IOException;
-
-import javax.net.ssl.SSLException;
-
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
@@ -37,46 +33,21 @@ public class AgoraController {
     }
     
     //start call
-//    @PostMapping("/send")
-//    public String sendCallNotification(@RequestBody CallNotificationRequest request) {
-//        agoraTokenService.sendCallNotification(
-//            request.getReceiverFCMToken(), 
-//            request.getSenderName(), 
-//            request.getChannelId(),
-//            request.getReceiverId(),
-//            request.getCallType()
-//        );
-//        return "✅ Notification sent successfully!";
-//    }
-    
     @PostMapping("/send")
-    public String sendCallNotification(@RequestBody CallNotificationRequest request) throws SSLException, IOException {
-        if (request.getReceiverVoipToken() != null && !request.getReceiverVoipToken().isEmpty()) {
-        	agoraTokenService.sendVoipPushNotification(
-                request.getReceiverVoipToken(),
-                request.getSenderName(),
-                request.getChannelId(),
-                request.getCallType()
-            );
-        } else if (request.getReceiverFCMToken() != null && !request.getReceiverFCMToken().isEmpty()) {
-        	agoraTokenService.sendFcmNotification(
-                request.getReceiverFCMToken(),
-                request.getSenderName(),
-                request.getChannelId(),
-                request.getReceiverId(),
-                request.getCallType()
-            );
-        } else {
-            return "❌ No valid token found for receiver.";
-        }
-		return null;
+    public String sendCallNotification(@RequestBody CallNotificationRequest request) {
+        agoraTokenService.sendCallNotification(
+            request.getReceiverFCMToken(), 
+            request.getSenderName(), 
+            request.getChannelId(),
+            request.getReceiverId(),
+            request.getCallType()
+        );
+        return "✅ Notification sent successfully!";
     }
-       
     
     // ✅ Create a class to map JSON request
     public static class CallNotificationRequest {
         private String receiverFCMToken;
-        private String receiverVoipToken;
         private String senderName;
         private String channelId;
         private String receiverId;
@@ -85,9 +56,6 @@ public class AgoraController {
         // Getters & Setters
         public String getReceiverFCMToken() { return receiverFCMToken; }
         public void setReceiverFCMToken(String receiverFCMToken) { this.receiverFCMToken = receiverFCMToken; }
-        
-        public String getReceiverVoipToken() { return receiverVoipToken; }
-        public void setReceiverVoipToken(String receiverVoipToken) { this.receiverVoipToken = receiverVoipToken; }
         
         public String getSenderName() { return senderName; }
         public void setSenderName(String senderName) { this.senderName = senderName; }
