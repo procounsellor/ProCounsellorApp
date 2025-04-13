@@ -6,4 +6,5 @@ import lombok.Data;
 public class MessageRequest {
     private String senderId;
     private String text;
+    private String receiverFcmToken;
 }

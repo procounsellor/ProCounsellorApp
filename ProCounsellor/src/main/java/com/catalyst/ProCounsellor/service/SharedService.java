@@ -35,6 +35,37 @@ public class SharedService {
 	        return snapshot.exists() ? snapshot.toObject(Counsellor.class) : null;
 	    }
 	    
+	    public String getFullNameFromUserName(String userName) {
+	        try {
+	            DocumentSnapshot userDoc = firestore.collection("users")
+	                    .document(userName)
+	                    .get()
+	                    .get();
+
+	            if (!userDoc.exists()) {
+	                userDoc = firestore.collection("counsellors")
+	                        .document(userName)
+	                        .get()
+	                        .get();
+	            }
+
+	            if (userDoc.exists()) {
+	                String firstName = userDoc.getString("firstName");
+	                String lastName = userDoc.getString("lastName");
+
+	                if (firstName != null && lastName != null) {
+	                    return firstName + " " + lastName;
+	                }
+	            }
+
+	            return userName;
+
+	        } catch (Exception e) {
+	            e.printStackTrace();
+	            return "Error retrieving user details";
+	        }
+	    }
+	    
 	    public ActivityLog createActivityObject(String activityString) {
 			ActivityLog activity = new ActivityLog();
 			activity.setActivity(activityString);
