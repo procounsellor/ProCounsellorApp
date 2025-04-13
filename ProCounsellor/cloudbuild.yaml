@@ -1,17 +1,17 @@
 steps:
-  # Step 1: Ensure dependencies are downloaded
-  - name: 'maven:3.8.5-openjdk-17'  # Uses Java 17 explicitly
+  # Step 1: Resolve dependencies
+  - name: 'maven:3.8.5-openjdk-17'
     entrypoint: mvn
     args: ['dependency:resolve']
     dir: 'ProCounsellor'
 
-  # Step 2: Build the JAR file
+  # Step 2: Build JAR
   - name: 'maven:3.8.5-openjdk-17'
     entrypoint: mvn
     args: ['clean', 'package', '-DskipTests']
     dir: 'ProCounsellor'
 
-  # Step 3: Build Docker image (fixed context path)
+  # Step 3: Build Docker image
   - name: 'gcr.io/cloud-builders/docker'
     args:
       - 'build'
@@ -27,12 +27,12 @@ steps:
       - 'push'
       - 'asia-south1-docker.pkg.dev/$PROJECT_ID/procounsellor-backend-repo/backend:$COMMIT_SHA'
 
-  # Step 5: Deploy to Cloud Run
+  # Step 5: Deploy to Cloud Run with service name substitution
   - name: 'gcr.io/cloud-builders/gcloud'
     args:
       - 'run'
       - 'deploy'
-      - 'procounsellor-backend'
+      - '${_SERVICE_NAME}'  # 👈 substitution here
       - '--image'
       - 'asia-south1-docker.pkg.dev/$PROJECT_ID/procounsellor-backend-repo/backend:$COMMIT_SHA'
       - '--platform'
@@ -45,6 +45,7 @@ steps:
 
 substitutions:
   _PROJECT_ID: "procounsellor-71824"
+  _SERVICE_NAME: "procounsellor-backend"  # 👈 default for main branch
 
 images:
   - 'asia-south1-docker.pkg.dev/$PROJECT_ID/procounsellor-backend-repo/backend:$COMMIT_SHA'
