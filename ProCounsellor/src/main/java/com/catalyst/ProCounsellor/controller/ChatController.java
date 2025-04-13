@@ -65,9 +65,10 @@ public class ChatController {
     public ResponseEntity<?> sendFileMessage(
             @PathVariable String chatId,
             @RequestParam("senderId") String senderId,
+            @RequestParam("receiverFcmToken") String receiverFcmToken,
             @RequestParam("file") MultipartFile file) {
         try {
-            String fileUrl = chatService.sendFileMessage(chatId, senderId, file);
+            String fileUrl = chatService.sendFileMessage(chatId, senderId, receiverFcmToken, file);
             return ResponseEntity.status(HttpStatus.CREATED).body("File sent successfully! URL: " + fileUrl);
         } catch (IllegalArgumentException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());

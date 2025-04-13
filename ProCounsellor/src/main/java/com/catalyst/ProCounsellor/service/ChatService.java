@@ -10,6 +10,15 @@ import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.database.ValueEventListener;
+import com.google.firebase.messaging.AndroidConfig;
+import com.google.firebase.messaging.AndroidNotification;
+import com.google.firebase.messaging.ApnsConfig;
+import com.google.firebase.messaging.Aps;
+import com.google.firebase.messaging.ApsAlert;
+import com.google.firebase.messaging.FirebaseMessaging;
+import com.google.firebase.messaging.FirebaseMessagingException;
+import com.google.firebase.messaging.Message;
+import com.google.firebase.messaging.Notification;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -46,6 +55,9 @@ public class ChatService {
     
     @Autowired
 	private CounsellorService counsellorService;
+    
+    @Autowired
+	private SharedService sharedService;
 
     public String startChat(String userId, String counsellorId) throws ExecutionException, InterruptedException {
         // Step 1: Validate userId exists in the users table (Firestore)
@@ -283,9 +295,59 @@ public class ChatService {
         messageData.put("timestamp", System.currentTimeMillis());
 
         chatMessagesRef.child(messageId).setValueAsync(messageData);
+        
+        // ✅ Send push notification
+        sendPushNotification(messageRequest.getReceiverFcmToken(), messageRequest.getSenderId(), messageRequest.getText());
     }
 
-    public String sendFileMessage(String chatId, String senderId, MultipartFile file) throws Exception {
+	private void sendPushNotification(String receiverFcmToken, String senderId, String messageText) {
+	    String senderName = sharedService.getFullNameFromUserName(senderId);
+
+	    Notification notification = Notification.builder()
+	        .setTitle(senderName)
+	        .setBody(messageText)
+	        .build();
+
+	    ApnsConfig apnsConfig = ApnsConfig.builder()
+	        .putHeader("apns-priority", "10")
+	        .setAps(Aps.builder()
+	            .setSound("default")
+	            .setAlert(ApsAlert.builder()
+	                .setTitle(senderName)
+	                .setBody(messageText)
+	                .build())
+	            .setContentAvailable(true)
+	            .build())
+	        .build();
+
+	    AndroidNotification androidNotification = AndroidNotification.builder()
+	        .setSound("default")
+	        .build();
+
+	    AndroidConfig androidConfig = AndroidConfig.builder()
+	    	.setPriority(AndroidConfig.Priority.HIGH) 
+	        .setNotification(androidNotification)
+	        .build();
+
+	    Message message = Message.builder()
+	        .setToken(receiverFcmToken)
+	        .setNotification(notification)
+	        .setApnsConfig(apnsConfig)
+	        .setAndroidConfig(androidConfig)
+	        .putData("type", "chat")
+	        .putData("senderId", senderId)
+	        .putData("message", messageText)
+	        .build();
+
+	    try {
+	        String response = FirebaseMessaging.getInstance().send(message);
+	        System.out.println("✅ Push notification sent successfully: " + response);
+	    } catch (FirebaseMessagingException e) {
+	        System.err.println("❌ Failed to send push notification: " + e.getMessage());
+	    }
+	}
+
+	public String sendFileMessage(String chatId, String senderId, String receiverFcmToken, MultipartFile file) throws Exception {
         // Fetch chat details to verify sender
         DocumentSnapshot chatSnapshot = firestore.collection("chats").document(chatId).get().get();
 
@@ -323,6 +385,8 @@ public class ChatService {
         messageData.put("timestamp", System.currentTimeMillis());
 
         chatMessagesRef.child(messageId).setValueAsync(messageData);
+        
+        sendPushNotification(receiverFcmToken, senderId, "📎 Sent a file");
 
         return fileUrl;
     }

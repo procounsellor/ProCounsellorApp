@@ -4,6 +4,7 @@ import com.catalyst.ProCounsellor.model.CallHistory;
 import com.catalyst.ProCounsellor.model.Counsellor;
 import com.catalyst.ProCounsellor.model.User;
 import com.google.cloud.firestore.DocumentSnapshot;
+import com.google.cloud.firestore.Firestore;
 import com.google.firebase.cloud.FirestoreClient;
 import com.google.firebase.database.*;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -124,36 +125,60 @@ public class CallService {
             }
         });
     }
- 
     
     public void saveCallDetailsToUserAndCounsellor(CallHistory callHistory, String callerId, String receiverId) {
         try {
-            DocumentSnapshot docRef = FirestoreClient.getFirestore()
-                .collection("users").document(callerId).get().get();
- 
-            boolean isCallerUser = docRef.exists(); // If exists, caller is a user
- 
-            User user = isCallerUser ? sharedService.getUserById(callerId) : sharedService.getUserById(receiverId);
-            Counsellor counsellor = isCallerUser ? sharedService.getCounsellorById(receiverId) : sharedService.getCounsellorById(callerId);
- 
-            if (user.getCallHistory() == null) {
-                user.setCallHistory(new ArrayList<>());
+            Firestore firestore = FirestoreClient.getFirestore();
+
+            // 🔍 Check if caller is a user
+            boolean callerIsUser = firestore.collection("users").document(callerId).get().get().exists();
+
+            // 🔍 Check if receiver is a user
+            boolean receiverIsUser = firestore.collection("users").document(receiverId).get().get().exists();
+
+            // 🔁 Prepare call participants
+            User user = null;
+            Counsellor counsellor = null;
+
+            if (callerIsUser) {
+                user = sharedService.getUserById(callerId);
+            } else {
+                counsellor = sharedService.getCounsellorById(callerId);
             }
- 
-            if (counsellor.getCallHistory() == null) {
-                counsellor.setCallHistory(new ArrayList<>());
+
+            if (receiverIsUser) {
+                if (user == null) {
+                    user = sharedService.getUserById(receiverId);
+                }
+            } else {
+                if (counsellor == null) {
+                    counsellor = sharedService.getCounsellorById(receiverId);
+                }
             }
- 
-            user.getCallHistory().add(callHistory);
-            counsellor.getCallHistory().add(callHistory);
- 
-            sharedService.updateUser(user);
-            sharedService.updateCounsellor(counsellor);
-            System.out.println("Call details updated for User & Counsellor.");
+
+            // ✅ Make sure both exist before proceeding
+            if (user != null) {
+                if (user.getCallHistory() == null) {
+                    user.setCallHistory(new ArrayList<>());
+                }
+                user.getCallHistory().add(callHistory);
+                sharedService.updateUser(user);
+            }
+
+            if (counsellor != null) {
+                if (counsellor.getCallHistory() == null) {
+                    counsellor.setCallHistory(new ArrayList<>());
+                }
+                counsellor.getCallHistory().add(callHistory);
+                sharedService.updateCounsellor(counsellor);
+            }
+
+            System.out.println("✅ Call details updated for available participants.");
         } catch (Exception e) {
-            System.err.println("Error saving call history: " + e.getMessage());
+            System.err.println("❌ Error saving call history: " + e.getMessage());
         }
     }
+
  
  
     /**
