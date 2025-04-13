@@ -12,7 +12,7 @@ import java.io.InputStream;
 public class PhotoService {
 
     // 🔧 Replace these with your bucket and path to Firebase JSON in GCS
-    private static final String CONFIG_BUCKET = " pro_counsellor_firebase_config";
+    private static final String CONFIG_BUCKET = "pro_counsellor_firebase_config";
     private static final String CONFIG_PATH = "firebase/credentials/procounsellor-71824-firebase-adminsdk-a73ra-0c3dfaf526.json";
 
     private Storage getFirebaseStorage() throws IOException {
