@@ -11,12 +11,12 @@ steps:
     args: ['clean', 'package', '-DskipTests']
     dir: 'ProCounsellor'
 
-  # Step 3: Build Docker image
+  # Step 3: Build Docker image for UAT
   - name: 'gcr.io/cloud-builders/docker'
     args:
       - 'build'
       - '-t'
-      - 'asia-south1-docker.pkg.dev/$PROJECT_ID/procounsellor-backend-repo/backend:$COMMIT_SHA'
+      - 'asia-south1-docker.pkg.dev/$PROJECT_ID/procounsellor-backend-repo/backend-uat:$COMMIT_SHA'
       - '-f'
       - 'ProCounsellor/Dockerfile'
       - 'ProCounsellor/'
@@ -25,16 +25,16 @@ steps:
   - name: 'gcr.io/cloud-builders/docker'
     args:
       - 'push'
-      - 'asia-south1-docker.pkg.dev/$PROJECT_ID/procounsellor-backend-repo/backend:$COMMIT_SHA'
+      - 'asia-south1-docker.pkg.dev/$PROJECT_ID/procounsellor-backend-repo/backend-uat:$COMMIT_SHA'
 
-  # Step 5: Deploy to Cloud Run with service name substitution
+  # Step 5: Deploy to Cloud Run UAT
   - name: 'gcr.io/cloud-builders/gcloud'
     args:
       - 'run'
       - 'deploy'
-      - '${_SERVICE_NAME}'  # 👈 substitution here
+      - 'procounsellor-backend-uat'  # 👈 New UAT service name
       - '--image'
-      - 'asia-south1-docker.pkg.dev/$PROJECT_ID/procounsellor-backend-repo/backend:$COMMIT_SHA'
+      - 'asia-south1-docker.pkg.dev/$PROJECT_ID/procounsellor-backend-repo/backend-uat:$COMMIT_SHA'
       - '--platform'
       - 'managed'
       - '--region'
@@ -45,10 +45,9 @@ steps:
 
 substitutions:
   _PROJECT_ID: "procounsellor-71824"
-  _SERVICE_NAME: "procounsellor-backend"  # 👈 default for main branch
 
 images:
-  - 'asia-south1-docker.pkg.dev/$PROJECT_ID/procounsellor-backend-repo/backend:$COMMIT_SHA'
+  - 'asia-south1-docker.pkg.dev/$PROJECT_ID/procounsellor-backend-repo/backend-uat:$COMMIT_SHA'
 
 options:
   logging: CLOUD_LOGGING_ONLY
