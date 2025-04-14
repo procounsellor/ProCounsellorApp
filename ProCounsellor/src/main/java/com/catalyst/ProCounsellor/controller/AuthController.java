@@ -43,28 +43,6 @@ public class AuthController {
     @Autowired
     private OTPService otpService;
 
-//    @PostMapping("/userSignup")
-//    public ResponseEntity<Map<String, Object>> userSignup(@RequestBody User user) throws ExecutionException, InterruptedException {
-//        String message = userService.signup(user);
-//        HttpStatus status = message.startsWith("Signup successful") ? HttpStatus.CREATED : HttpStatus.BAD_REQUEST;
-//        return buildResponse(message, status);
-//    }
-//
-//    @PostMapping("/userSignin")
-//    public ResponseEntity<Map<String, Object>> userSignin(@RequestParam String identifier, @RequestParam String password) throws ExecutionException, InterruptedException {
-//        try {
-//            String message = userService.signin(identifier, password);
-//            return buildResponse(message, HttpStatus.OK);
-//        } catch (UserNotFoundException e) {
-//            return buildResponse(e.getMessage(), HttpStatus.NOT_FOUND);
-//        } catch (InvalidCredentialsException e) {
-//            return buildResponse(e.getMessage(), HttpStatus.UNAUTHORIZED);
-//        } catch (IllegalArgumentException e) {
-//            return buildResponse(e.getMessage(), HttpStatus.BAD_REQUEST);
-//        }
-//    }
-
-
     @PostMapping("/counsellorSignup")
     public ResponseEntity<Map<String, Object>> counsellorSignup(
             @RequestParam String firstName,
@@ -194,7 +172,8 @@ public class AuthController {
     @PostMapping("/verifyAndUserSignup")
     public ResponseEntity<Map<String, Object>> verifyAndSignupOrSignin(
             @RequestParam String phoneNumber, @RequestParam String otp) throws ExecutionException, InterruptedException, FirebaseAuthException {
-
+    	
+    	phoneNumber=phoneNumber.replace(" ", "+");
         if (phoneNumber == null || phoneNumber.isEmpty()) {
             return ResponseEntity.badRequest().body(Map.of("message", "Phone number is mandatory and cannot be null or empty."));
         }
