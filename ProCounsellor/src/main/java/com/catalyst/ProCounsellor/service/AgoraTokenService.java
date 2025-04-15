@@ -116,10 +116,10 @@ public class AgoraTokenService {
         // Step 5: Build and send final message
         Message message = Message.builder()
             .setToken(receiverFCMToken)
-//            .setNotification(notification)
             .putData("type", "incoming_call")
             .putData("channelId", channelId)
             .putData("callerName", senderName)
+            .putData("receiverName", receiverId)
             .putData("callType", callType)
             .setApnsConfig(apnsConfig)
             .setAndroidConfig(androidConfig) // ✅ Added for Android
