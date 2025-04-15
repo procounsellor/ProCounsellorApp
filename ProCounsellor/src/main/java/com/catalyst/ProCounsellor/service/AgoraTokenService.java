@@ -80,6 +80,7 @@ public class AgoraTokenService {
     	
     	DatabaseReference callRef = firebaseDatabase.getReference("calls").child(callId);
         callRef.child("pickedTime").setValueAsync(pickedTimeMillis);
+        callRef.child("status").setValueAsync("accepted");
     }
 
     public void sendCallNotification(String receiverFCMToken, String senderName, String channelId, String receiverId, String callType) {
