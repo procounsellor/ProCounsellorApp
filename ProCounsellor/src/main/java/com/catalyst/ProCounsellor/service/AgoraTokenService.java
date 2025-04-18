@@ -12,6 +12,7 @@ import com.eatthepath.pushy.apns.PushNotificationResponse;
 import com.eatthepath.pushy.apns.util.SimpleApnsPayloadBuilder;
 import com.eatthepath.pushy.apns.util.SimpleApnsPushNotification;
 import com.eatthepath.pushy.apns.util.TokenUtil;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.cloud.firestore.DocumentSnapshot;
 import com.google.firebase.cloud.FirestoreClient;
 import com.google.firebase.database.DataSnapshot;
@@ -35,6 +36,9 @@ import java.io.InputStream;
 
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 
@@ -103,10 +107,12 @@ public class AgoraTokenService {
         String voipToken;
 
         if (user == null) {
+        	System.out.println("not user");
             counsellor = sharedService.getCounsellorById(receiverId);
             platform = counsellor != null ? counsellor.getPlatform() : "";
             voipToken = counsellor != null ? counsellor.getVoipToken() : "";
         } else {
+        	System.out.println("user");
             platform = user.getPlatform();
             voipToken = user.getVoipToken();
         }
@@ -124,10 +130,9 @@ public class AgoraTokenService {
             agoraCallSignalling.child(receiverId).setValueAsync(new CallSession(callerName, channelId, callType));
             startCall(channelId, callerName, receiverId, callType);
 
-            // Step 2: Load .p12 file from GCS as bytes (no file download!)
+            // Step 2: Load .p12 file from GCS
             String bucketName = "voipcert";
             String objectName = "voip_cert.p12";
-
             Storage storage = StorageOptions.getDefaultInstance().getService();
             Blob blob = storage.get(bucketName, objectName);
 
@@ -137,25 +142,47 @@ public class AgoraTokenService {
             }
 
             byte[] p12Bytes = blob.getContent();
-
-            // Step 3: Convert bytes into InputStream
             InputStream p12Stream = new ByteArrayInputStream(p12Bytes);
             String p12Password = "ProCounsellor@2024";
 
-            // Step 4: Initialize APNs Client using InputStream
+            // Step 3: Initialize APNs Client
             ApnsClient apnsClient = new ApnsClientBuilder()
                     .setApnsServer(ApnsClientBuilder.DEVELOPMENT_APNS_HOST)
                     .setClientCredentials(p12Stream, p12Password)
                     .build();
 
-            // Step 5: Create VoIP payload
-            SimpleApnsPayloadBuilder payloadBuilder = new SimpleApnsPayloadBuilder();
-            payloadBuilder.setContentAvailable(true);
-            payloadBuilder.setAlertBody(callerName + " is calling you...");
-            String payload = payloadBuilder.build();
+            // Step 4: Construct the JSON payload
+            Map<String, Object> payloadMap = new HashMap<>();
+            payloadMap.put("id", UUID.randomUUID().toString());
+            payloadMap.put("nameCaller", callerName);
+            payloadMap.put("handle", callerName); // ✅ REQUIRED to avoid crash
+            payloadMap.put("type", callType.equalsIgnoreCase("video") ? 1 : 0);
+            payloadMap.put("duration", 60000);
+            payloadMap.put("textAccept", "Answer");
+            payloadMap.put("textDecline", "Decline");
+            payloadMap.put("textMissedCall", "Missed call");
+            payloadMap.put("textCallback", "Call back");
 
-            // Step 6: Prepare push data
-            String topic = "com.catalyst.ProCounsellor.voip"; // this must match your entitlements
+            Map<String, Object> ios = new HashMap<>();
+            ios.put("iconName", "CallKitIcon");
+            ios.put("handleType", "generic");
+            ios.put("supportsVideo", true);
+            ios.put("maximumCallGroups", 2);
+            ios.put("maximumCallsPerCallGroup", 1);
+            payloadMap.put("ios", ios);
+
+            Map<String, String> extra = new HashMap<>();
+            extra.put("channelId", channelId);
+            extra.put("callerName", callerName);
+            extra.put("receiverName", receiverId);
+            extra.put("callType", callType);
+            payloadMap.put("extra", extra);
+
+            ObjectMapper objectMapper = new ObjectMapper();
+            String payload = objectMapper.writeValueAsString(payloadMap);
+
+            // Step 5: Prepare push
+            String topic = "com.catalyst.ProCounsellor.voip";
             String token = TokenUtil.sanitizeTokenString(voipToken);
 
             SimpleApnsPushNotification pushNotification = new SimpleApnsPushNotification(
@@ -164,7 +191,7 @@ public class AgoraTokenService {
                     payload
             );
 
-            // Step 7: Send push
+            // Step 6: Send push
             PushNotificationResponse<SimpleApnsPushNotification> response =
                     apnsClient.sendNotification(pushNotification).get();
 
@@ -180,7 +207,6 @@ public class AgoraTokenService {
             System.err.println("❌ Error sending VoIP notification: " + e.getMessage());
         }
     }
-
 
     public void sendFcmNotification(String receiverFCMToken, String senderName, String channelId, String receiverId, String callType) {
         // ✅ Step 1: Save signaling data to Firebase Realtime DB
