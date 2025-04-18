@@ -6,6 +6,12 @@ import org.springframework.stereotype.Service;
 import com.catalyst.ProCounsellor.model.CallHistory;
 import com.catalyst.ProCounsellor.model.Counsellor;
 import com.catalyst.ProCounsellor.model.User;
+import com.eatthepath.pushy.apns.ApnsClient;
+import com.eatthepath.pushy.apns.ApnsClientBuilder;
+import com.eatthepath.pushy.apns.PushNotificationResponse;
+import com.eatthepath.pushy.apns.util.SimpleApnsPayloadBuilder;
+import com.eatthepath.pushy.apns.util.SimpleApnsPushNotification;
+import com.eatthepath.pushy.apns.util.TokenUtil;
 import com.google.cloud.firestore.DocumentSnapshot;
 import com.google.firebase.cloud.FirestoreClient;
 import com.google.firebase.database.DataSnapshot;
@@ -18,14 +24,18 @@ import io.agora.media.RtcTokenBuilder2;
 
 import com.google.firebase.messaging.AndroidConfig;
 import com.google.firebase.messaging.AndroidNotification;
-import com.google.firebase.messaging.ApnsConfig;
-import com.google.firebase.messaging.Aps;
 import com.google.firebase.messaging.FirebaseMessaging;
 import com.google.firebase.messaging.Message;
-import com.google.firebase.messaging.Notification;
+
+
+import com.google.cloud.storage.*;
+
+import java.io.ByteArrayInputStream;
+import java.io.InputStream;
 
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 
 @Service
@@ -83,38 +93,110 @@ public class AgoraTokenService {
         callRef.child("status").setValueAsync("accepted");
     }
 
-    public void sendCallNotification(String receiverFCMToken, String senderName, String channelId, String receiverId, String callType) {
-        // Step 1: Save signaling data to Firebase Realtime DB
+    public void sendCallNotification(String receiverFCMToken, String senderName, String channelId, String receiverId, String callType)
+            throws ExecutionException, InterruptedException {
+        
+        User user = sharedService.getUserById(receiverId);
+        Counsellor counsellor = null;
+
+        String platform;
+        String voipToken;
+
+        if (user == null) {
+            counsellor = sharedService.getCounsellorById(receiverId);
+            platform = counsellor != null ? counsellor.getPlatform() : "";
+            voipToken = counsellor != null ? counsellor.getVoipToken() : "";
+        } else {
+            platform = user.getPlatform();
+            voipToken = user.getVoipToken();
+        }
+
+        if ("ios".equalsIgnoreCase(platform) && voipToken != null && !voipToken.isEmpty()) {
+            sendVoIPCallNotification(voipToken, senderName, channelId, receiverId, callType);
+        } else {
+            sendFcmNotification(receiverFCMToken, senderName, channelId, receiverId, callType);
+        }
+    }
+    
+    public void sendVoIPCallNotification(String voipToken, String callerName, String channelId, String receiverId, String callType) {
+        try {
+            // Step 1: Save signaling info
+            agoraCallSignalling.child(receiverId).setValueAsync(new CallSession(callerName, channelId, callType));
+            startCall(channelId, callerName, receiverId, callType);
+
+            // Step 2: Load .p12 file from GCS as bytes (no file download!)
+            String bucketName = "voipcert";
+            String objectName = "voip_cert.p12";
+
+            Storage storage = StorageOptions.getDefaultInstance().getService();
+            Blob blob = storage.get(bucketName, objectName);
+
+            if (blob == null) {
+                System.err.println("❌ Could not find voip_cert.p12 in GCS.");
+                return;
+            }
+
+            byte[] p12Bytes = blob.getContent();
+
+            // Step 3: Convert bytes into InputStream
+            InputStream p12Stream = new ByteArrayInputStream(p12Bytes);
+            String p12Password = "ProCounsellor@2024";
+
+            // Step 4: Initialize APNs Client using InputStream
+            ApnsClient apnsClient = new ApnsClientBuilder()
+                    .setApnsServer(ApnsClientBuilder.DEVELOPMENT_APNS_HOST)
+                    .setClientCredentials(p12Stream, p12Password)
+                    .build();
+
+            // Step 5: Create VoIP payload
+            SimpleApnsPayloadBuilder payloadBuilder = new SimpleApnsPayloadBuilder();
+            payloadBuilder.setContentAvailable(true);
+            payloadBuilder.setAlertBody(callerName + " is calling you...");
+            String payload = payloadBuilder.build();
+
+            // Step 6: Prepare push data
+            String topic = "com.catalyst.ProCounsellor.voip"; // this must match your entitlements
+            String token = TokenUtil.sanitizeTokenString(voipToken);
+
+            SimpleApnsPushNotification pushNotification = new SimpleApnsPushNotification(
+                    token,
+                    topic,
+                    payload
+            );
+
+            // Step 7: Send push
+            PushNotificationResponse<SimpleApnsPushNotification> response =
+                    apnsClient.sendNotification(pushNotification).get();
+
+            if (response.isAccepted()) {
+                System.out.println("✅ VoIP call notification accepted by APNs");
+            } else {
+                System.err.println("❌ VoIP call notification rejected: " + response.getRejectionReason());
+            }
+
+            apnsClient.close().get();
+        } catch (Exception e) {
+            e.printStackTrace();
+            System.err.println("❌ Error sending VoIP notification: " + e.getMessage());
+        }
+    }
+
+
+    public void sendFcmNotification(String receiverFCMToken, String senderName, String channelId, String receiverId, String callType) {
+        // ✅ Step 1: Save signaling data to Firebase Realtime DB
         agoraCallSignalling.child(receiverId).setValueAsync(new CallSession(senderName, channelId, callType));
         startCall(channelId, senderName, receiverId, callType);
 
-        // Step 2: Build notification object
-        Notification notification = Notification.builder()
-            .setTitle("Incoming Call")
-            .setBody(senderName + " is calling you...")
-            .build();
-
-        // Step 3: Build APNs config (iOS)
-        ApnsConfig apnsConfig = ApnsConfig.builder()
-            .putHeader("apns-priority", "10")
-            .setAps(
-                Aps.builder()
-                    .setSound("default")
-                    .setContentAvailable(true)
-                    .build()
-            )
-            .build();
-
-        // ✅ Step 4: Build Android config
+        // ✅ Step 2: Build Android config
         AndroidConfig androidConfig = AndroidConfig.builder()
             .setPriority(AndroidConfig.Priority.HIGH)
             .setNotification(AndroidNotification.builder()
                 .setSound("default")
-                .setChannelId("high_importance_channel") // ✅ This must match client channel ID
+                .setChannelId("high_importance_channel") // Must match Android's channel ID
                 .build())
             .build();
 
-        // Step 5: Build and send final message
+        // ✅ Step 3: Build FCM data payload
         Message message = Message.builder()
             .setToken(receiverFCMToken)
             .putData("type", "incoming_call")
@@ -122,15 +204,15 @@ public class AgoraTokenService {
             .putData("callerName", senderName)
             .putData("receiverName", receiverId)
             .putData("callType", callType)
-            .setApnsConfig(apnsConfig)
-            .setAndroidConfig(androidConfig) // ✅ Added for Android
+            .setAndroidConfig(androidConfig)
             .build();
 
+        // ✅ Step 4: Send push
         try {
             FirebaseMessaging.getInstance().send(message);
-            System.out.println("✅ Call Notification Sent!");
+            System.out.println("✅ Android Call Notification Sent!");
         } catch (Exception e) {
-            System.err.println("❌ Error sending notification: " + e.getMessage());
+            System.err.println("❌ Error sending Android call notification: " + e.getMessage());
         }
     }
 

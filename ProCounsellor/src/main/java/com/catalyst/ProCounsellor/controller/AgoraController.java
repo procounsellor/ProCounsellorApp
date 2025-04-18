@@ -1,5 +1,7 @@
 package com.catalyst.ProCounsellor.controller;
 
+import java.util.concurrent.ExecutionException;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
@@ -34,7 +36,7 @@ public class AgoraController {
     
     //start call
     @PostMapping("/send")
-    public String sendCallNotification(@RequestBody CallNotificationRequest request) {
+    public String sendCallNotification(@RequestBody CallNotificationRequest request) throws ExecutionException, InterruptedException {
         agoraTokenService.sendCallNotification(
             request.getReceiverFCMToken(), 
             request.getSenderName(), 
