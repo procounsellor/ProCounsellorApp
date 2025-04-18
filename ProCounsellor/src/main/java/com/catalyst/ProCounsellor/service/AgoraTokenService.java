@@ -197,7 +197,7 @@ public class AgoraTokenService {
 
             if (response.isAccepted()) {
                 System.out.println("✅ VoIP call notification accepted by APNs");
-            } else {
+                System.out.println("perfect");            } else {
                 System.err.println("❌ VoIP call notification rejected: " + response.getRejectionReason());
             }
 
