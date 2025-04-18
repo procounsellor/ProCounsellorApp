@@ -44,4 +44,5 @@ public class Counsellor {
     private StateType state;
     private String fcmToken;
     private String voipToken;
+    private String platform;
 }

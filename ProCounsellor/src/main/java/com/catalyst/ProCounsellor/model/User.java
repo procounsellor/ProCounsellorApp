@@ -35,6 +35,7 @@ public class User {
     private List<String> languagesKnow;
     private String fcmToken;
     private String voipToken;
+    private String platform;
 }
 
        
