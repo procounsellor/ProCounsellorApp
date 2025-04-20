@@ -215,12 +215,8 @@ public class AgoraTokenService {
 
         // ✅ Step 2: Build Android config
         AndroidConfig androidConfig = AndroidConfig.builder()
-            .setPriority(AndroidConfig.Priority.HIGH)
-            .setNotification(AndroidNotification.builder()
-                .setSound("default")
-                .setChannelId("high_importance_channel") // Must match Android's channel ID
-                .build())
-            .build();
+        	    .setPriority(AndroidConfig.Priority.HIGH)
+        	    .build();
 
         // ✅ Step 3: Build FCM data payload
         Message message = Message.builder()
