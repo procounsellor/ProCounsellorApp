@@ -2,8 +2,10 @@ package com.catalyst.ProCounsellor.service;
 
 import com.catalyst.ProCounsellor.model.BankDetails;
 import com.catalyst.ProCounsellor.model.Counsellor;
+import com.catalyst.ProCounsellor.model.Transaction;
 import com.google.cloud.firestore.DocumentReference;
 import com.google.cloud.firestore.DocumentSnapshot;
+import com.google.cloud.firestore.FieldValue;
 import com.google.cloud.firestore.Firestore;
 import com.razorpay.FundAccount;
 import com.razorpay.Order;
@@ -18,6 +20,8 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.ExecutionException;
 
 import org.json.JSONObject;
@@ -43,7 +47,7 @@ public class WalletService {
     private final String USERS_COLLECTION = "users";
     private final String COUNSELLORS_COLLECTION = "counsellors";
 
-public WalletService() {
+    public WalletService() {
         this.keyId = System.getenv("RAZORPAY_KEY_ID");
         this.keySecret = System.getenv("RAZORPAY_KEY_SECRET");
 
@@ -65,16 +69,73 @@ public WalletService() {
         return order.toString();
     }
     
-    public void addFunds(String userName, double amount) throws ExecutionException, InterruptedException {
+    public void addFunds(String userName, double amount, String paymentId) throws ExecutionException, InterruptedException {
         DocumentReference userRef = firestore.collection(USERS_COLLECTION).document(userName);
         DocumentSnapshot snapshot = userRef.get().get();
-        
+
         if (!snapshot.exists()) {
             throw new IllegalArgumentException("User not found");
         }
-        
+
         Long currentBalance = snapshot.getLong("walletAmount");
         userRef.update("walletAmount", currentBalance + (long) amount);
+
+        // Create transaction
+        Transaction txn = new Transaction("credit", amount, System.currentTimeMillis(), "Funds added via Razorpay", paymentId);
+
+        // Add to Firestore as array
+        Map<String, Object> txnMap = new HashMap<>();
+        txnMap.put("type", txn.getType());
+        txnMap.put("amount", txn.getAmount());
+        txnMap.put("timestamp", txn.getTimestamp());
+        txnMap.put("description", txn.getDescription());
+        txnMap.put("paymentId", txn.getPaymentId());
+
+        userRef.update("transactions", FieldValue.arrayUnion(txnMap));
+    }
+    
+    public void transferFunds(String userName, String counsellorName, double amount) throws ExecutionException, InterruptedException {
+        DocumentReference userRef = firestore.collection(USERS_COLLECTION).document(userName);
+        DocumentReference counsellorRef = firestore.collection(COUNSELLORS_COLLECTION).document(counsellorName);
+
+        DocumentSnapshot userSnapshot = userRef.get().get();
+        DocumentSnapshot counsellorSnapshot = counsellorRef.get().get();
+
+        if (!userSnapshot.exists() || !counsellorSnapshot.exists()) {
+            throw new IllegalArgumentException("User or Counsellor not found");
+        }
+
+        Long userBalance = userSnapshot.getLong("walletAmount");
+        Long counsellorBalance = counsellorSnapshot.getLong("walletAmount");
+
+        if (userBalance < amount) {
+            throw new IllegalArgumentException("Insufficient balance");
+        }
+
+        // Update balances
+        userRef.update("walletAmount", userBalance - (long) amount);
+        counsellorRef.update("walletAmount", counsellorBalance + (long) amount);
+
+        // Create transactions
+        Transaction debitTxn = new Transaction("debit", amount, System.currentTimeMillis(), "Transferred to " + counsellorName, null);
+        Transaction creditTxn = new Transaction("credit", amount, System.currentTimeMillis(), "Received from " + userName, null);
+
+        // Map for Firestore
+        Map<String, Object> debitTxnMap = new HashMap<>();
+        debitTxnMap.put("type", debitTxn.getType());
+        debitTxnMap.put("amount", debitTxn.getAmount());
+        debitTxnMap.put("timestamp", debitTxn.getTimestamp());
+        debitTxnMap.put("description", debitTxn.getDescription());
+
+        Map<String, Object> creditTxnMap = new HashMap<>();
+        creditTxnMap.put("type", creditTxn.getType());
+        creditTxnMap.put("amount", creditTxn.getAmount());
+        creditTxnMap.put("timestamp", creditTxn.getTimestamp());
+        creditTxnMap.put("description", creditTxn.getDescription());
+
+        // Update transactions array
+        userRef.update("transactions", FieldValue.arrayUnion(debitTxnMap));
+        counsellorRef.update("transactions", FieldValue.arrayUnion(creditTxnMap));
     }
 
     public String withdrawFundsToBank(String userName, double amount) throws IOException, ExecutionException, InterruptedException {
@@ -105,7 +166,7 @@ public WalletService() {
         String apiUrl = "https://api.razorpay.com/v1/payouts";
 
         JSONObject payoutRequest = new JSONObject();
-        payoutRequest.put("account_number", "Your_Razorpay_Account_Number"); // Replace with actual account number
+        payoutRequest.put("account_number", "Your_Razorpay_Account_Number"); // Replace with actual account number:TODO
         payoutRequest.put("fund_account", new JSONObject()
             .put("account_type", "bank_account")
             .put("bank_account", new JSONObject()
@@ -152,27 +213,5 @@ public WalletService() {
         }
 
         return response.toString();
-    }
-
-    public void transferFunds(String userName, String counsellorName, double amount) throws ExecutionException, InterruptedException {
-        DocumentReference userRef = firestore.collection(USERS_COLLECTION).document(userName);
-        DocumentReference counsellorRef = firestore.collection(COUNSELLORS_COLLECTION).document(counsellorName);
-        
-        DocumentSnapshot userSnapshot = userRef.get().get();
-        DocumentSnapshot counsellorSnapshot = counsellorRef.get().get();
-        
-        if (!userSnapshot.exists() || !counsellorSnapshot.exists()) {
-            throw new IllegalArgumentException("User or Counsellor not found");
-        }
-
-        Long userBalance = userSnapshot.getLong("walletAmount");
-        Long counsellorBalance = counsellorSnapshot.getLong("walletAmount");
-
-        if (userBalance < amount) {
-            throw new IllegalArgumentException("Insufficient balance");
-        }
-
-        userRef.update("walletAmount", userBalance - (long) amount);
-        counsellorRef.update("walletAmount", counsellorBalance + (long) amount);
     }
 }
