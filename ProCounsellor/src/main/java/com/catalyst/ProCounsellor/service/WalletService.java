@@ -82,6 +82,10 @@ public class WalletService {
         }
 
         Long currentBalance = snapshot.getLong("walletAmount");
+        if (currentBalance == null) {
+            currentBalance = 0L;
+        }
+
         userRef.update("walletAmount", currentBalance + (long) amount);
 
         // Create transaction
@@ -97,7 +101,7 @@ public class WalletService {
 
         userRef.update("transactions", FieldValue.arrayUnion(txnMap));
     }
-    
+
     public void transferFunds(String userName, String counsellorName, double amount) throws ExecutionException, InterruptedException {
         DocumentReference userRef = firestore.collection(USERS_COLLECTION).document(userName);
         DocumentReference counsellorRef = firestore.collection(COUNSELLORS_COLLECTION).document(counsellorName);
@@ -110,7 +114,13 @@ public class WalletService {
         }
 
         Long userBalance = userSnapshot.getLong("walletAmount");
+        if (userBalance == null) {
+        	userBalance = 0L;
+        }
         Long counsellorBalance = counsellorSnapshot.getLong("walletAmount");
+        if (counsellorBalance == null) {
+        	counsellorBalance = 0L;
+        }
 
         if (userBalance < amount) {
             throw new IllegalArgumentException("Insufficient balance");
