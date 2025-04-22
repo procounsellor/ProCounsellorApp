@@ -15,7 +15,7 @@ public class WalletController {
     @PostMapping("/add")
     public ResponseEntity<String> addFunds(@RequestParam String userName, @RequestParam double amount) {
         try {
-            String orderResponse = walletService.createPaymentOrder(amount, "order_" + userName + "_" + System.currentTimeMillis());
+            String orderResponse = walletService.createPaymentOrder(userName, amount, "order_" + userName + "_" + System.currentTimeMillis());
             return ResponseEntity.ok(orderResponse);
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(e.getMessage());

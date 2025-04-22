@@ -56,15 +56,19 @@ public class WalletService {
         }
     }
 
-    public String createPaymentOrder(double amount, String receipt) throws RazorpayException {
+    public String createPaymentOrder(String userName, double amount, String receipt) throws RazorpayException {
         RazorpayClient razorpay = new RazorpayClient(keyId, keySecret);
-        
+
+        JSONObject notes = new JSONObject();
+        notes.put("userName", userName); // ✅ Attach userName to notes
+
         JSONObject orderRequest = new JSONObject();
         orderRequest.put("amount", amount * 100);  // Amount in paise
         orderRequest.put("currency", "INR");
         orderRequest.put("receipt", receipt);
         orderRequest.put("payment_capture", 1);
-        
+        orderRequest.put("notes", notes); // ✅ Add notes here
+
         Order order = razorpay.orders.create(orderRequest);
         return order.toString();
     }

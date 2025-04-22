@@ -43,16 +43,23 @@ public class WebhookController {
             System.out.println("✅ Received Webhook: " + webhookData.toString());
 
             String event = webhookData.getString("event");
+            System.out.println("Webhook Event: " + event); 
             if ("payment.captured".equals(event)) {
+            	System.out.println("Entered payment capture condition");
                 JSONObject paymentEntity = webhookData.getJSONObject("payload").getJSONObject("payment").getJSONObject("entity");
                 double amount = paymentEntity.getDouble("amount") / 100.0;
-                String paymentId = paymentEntity.getString("id");
+                String paymentId = paymentEntity.getString("id"); // ✅ Razorpay Payment ID
 
-                JSONObject notes = paymentEntity.getJSONObject("notes");
-                String userName = notes.getString("userName");
+                JSONObject notes = paymentEntity.optJSONObject("notes");
+                String userName = (notes != null && notes.has("userName")) ? notes.getString("userName") : null;
 
-                walletService.addFunds(userName, amount, paymentId);
-                return ResponseEntity.ok("Wallet updated successfully");
+                if (userName != null) {
+                    walletService.addFunds(userName, amount, paymentId); // ✅ Pass paymentId
+                    return ResponseEntity.ok("Wallet updated successfully");
+                } else {
+                    System.out.println("⚠️ UserName missing in notes");
+                    return ResponseEntity.status(400).body("UserName missing in notes");
+                }
             }
 
             // Log other events if needed
