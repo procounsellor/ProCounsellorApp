@@ -18,6 +18,7 @@ public class User {
     private String email;   
     private String password;
     private Long walletAmount;
+    private List<Transaction> transactions;
     private BankDetails bankDetails;
     private String role;
     private List<ActivityLog> activityLog;

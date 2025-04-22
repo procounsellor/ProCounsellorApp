@@ -18,6 +18,7 @@ public class Counsellor {
     private String description;// to be written in third party
     private String email;
     private Long walletAmount;
+    private List<Transaction> transactions;
     private BankDetails bankDetails;
     private String photoUrl;
     private String password;
