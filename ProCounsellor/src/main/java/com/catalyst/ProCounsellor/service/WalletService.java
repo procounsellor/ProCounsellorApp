@@ -3,6 +3,7 @@ package com.catalyst.ProCounsellor.service;
 import com.catalyst.ProCounsellor.model.BankDetails;
 import com.catalyst.ProCounsellor.model.Counsellor;
 import com.catalyst.ProCounsellor.model.Transaction;
+import com.catalyst.ProCounsellor.model.User;
 import com.google.cloud.firestore.DocumentReference;
 import com.google.cloud.firestore.DocumentSnapshot;
 import com.google.cloud.firestore.FieldValue;
@@ -153,19 +154,38 @@ public class WalletService {
     }
 
     public String withdrawFundsToBank(String userName, double amount) throws IOException, ExecutionException, InterruptedException {
-        DocumentReference userRef = firestore.collection(COUNSELLORS_COLLECTION).document(userName);
+        DocumentReference userRef = firestore.collection(USERS_COLLECTION).document(userName);
         DocumentSnapshot snapshot = userRef.get().get();
 
+        boolean isCounsellor = false;
+
+        // Step 1: Check if user exists in USERS_COLLECTION
         if (!snapshot.exists()) {
-            throw new IllegalArgumentException("Counsellor not found");
+            // Step 2: If not found, check COUNSELLORS_COLLECTION
+            userRef = firestore.collection(COUNSELLORS_COLLECTION).document(userName);
+            snapshot = userRef.get().get();
+            isCounsellor = true;
+
+            if (!snapshot.exists()) {
+                throw new IllegalArgumentException("User or Counsellor not found");
+            }
         }
 
         Long currentBalance = snapshot.getLong("walletAmount");
-        if (currentBalance < amount) {
+        if (currentBalance == null || currentBalance < amount) {
             throw new IllegalArgumentException("Insufficient balance");
         }
 
-        BankDetails bankDetails = snapshot.toObject(Counsellor.class).getBankDetails();
+        BankDetails bankDetails;
+
+        if (isCounsellor) {
+            // Map counsellor entity to get bank details
+            bankDetails = snapshot.toObject(Counsellor.class).getBankDetails();
+        } else {
+            // Map user entity to get bank details (assuming users also have bank details)
+            bankDetails = snapshot.toObject(User.class).getBankDetails();
+        }
+
         String accountNumber = bankDetails.getBankAccountNumber();
         String ifscCode = bankDetails.getIfscCode();
 
@@ -180,8 +200,9 @@ public class WalletService {
         String apiUrl = "https://api.razorpay.com/v1/payouts";
 
         JSONObject payoutRequest = new JSONObject();
-        payoutRequest.put("account_number", "Your_Razorpay_Account_Number"); // Replace with actual account number:TODO
-        payoutRequest.put("fund_account", new JSONObject()
+        payoutRequest.put("account_number", "Your_Razorpay_Account_Number"); // TODO: Replace with your actual account number
+
+        JSONObject fundAccount = new JSONObject()
             .put("account_type", "bank_account")
             .put("bank_account", new JSONObject()
                 .put("account_number", accountNumber)
@@ -190,7 +211,9 @@ public class WalletService {
                 .put("name", snapshot.getString("firstName") + " " + snapshot.getString("lastName"))
                 .put("email", snapshot.getString("email"))
                 .put("contact", snapshot.getString("phoneNumber"))
-                .put("type", "vendor")));
+                .put("type", "vendor"));
+
+        payoutRequest.put("fund_account", fundAccount);
         payoutRequest.put("amount", (int) (amount * 100)); // Convert to paise
         payoutRequest.put("currency", "INR");
         payoutRequest.put("mode", "IMPS");
@@ -198,9 +221,24 @@ public class WalletService {
         payoutRequest.put("queue_if_low_balance", true);
 
         // Send HTTP Request
-        String response = sendHttpPost(apiUrl, payoutRequest.toString());
+        String payoutResponse = sendHttpPost(apiUrl, payoutRequest.toString());
 
-        return response;
+        // Optionally parse Razorpay response to get payout ID or reference
+        JSONObject payoutResponseJson = new JSONObject(payoutResponse);
+        String payoutId = payoutResponseJson.optString("id", "N/A"); // Razorpay payout ID
+
+        // Create a debit transaction entry
+        Map<String, Object> txnMap = new HashMap<>();
+        txnMap.put("type", "debit");
+        txnMap.put("amount", amount);
+        txnMap.put("timestamp", System.currentTimeMillis());
+        txnMap.put("description", "Withdrawal to bank account");
+        txnMap.put("payoutId", payoutId);
+
+        // Add transaction to transactions array
+        userRef.update("transactions", FieldValue.arrayUnion(txnMap));
+
+        return payoutResponse;
     }
     
     private String sendHttpPost(String apiUrl, String jsonBody) throws IOException {
