@@ -11,33 +11,24 @@ import java.util.concurrent.ExecutionException;
 
 @RestController
 @RequestMapping("/api/community-post-comments")
+@CrossOrigin
 public class CommunityPostCommentController {
 
     @Autowired
     private CommunityPostCommentService commentService;
 
     @PostMapping
-    public CommunityPostComment createComment(@RequestBody CommunityPostComment comment) throws ExecutionException, InterruptedException {
-        return commentService.createComment(comment);
+    public CommunityPostComment addComment(@RequestBody CommunityPostComment comment) throws ExecutionException, InterruptedException {
+        return commentService.addComment(comment);
     }
 
-    @GetMapping("/{commentId}")
-    public CommunityPostComment getCommentById(@PathVariable String commentId) throws ExecutionException, InterruptedException {
-        return commentService.getCommentById(commentId);
-    }
-
-    @GetMapping("/post/{postId}")
-    public List<CommunityPostComment> getCommentsByPostId(@PathVariable String postId) throws ExecutionException, InterruptedException {
+    @GetMapping("/{postId}")
+    public List<CommunityPostComment> getComments(@PathVariable String postId) throws ExecutionException, InterruptedException {
         return commentService.getCommentsByPostId(postId);
     }
 
-    @PutMapping("/{commentId}")
-    public CommunityPostComment updateComment(@PathVariable String commentId, @RequestBody CommunityPostComment updatedComment) throws ExecutionException, InterruptedException {
-        return commentService.updateComment(commentId, updatedComment);
+    @DeleteMapping("/{postId}/{commentIndex}")
+    public String deleteComment(@PathVariable String postId, @PathVariable int commentIndex) throws ExecutionException, InterruptedException {
+        return commentService.deleteComment(postId, commentIndex);
     }
-
-    @DeleteMapping("/{commentId}")
-    public String deleteComment(@PathVariable String commentId) throws ExecutionException, InterruptedException {
-        return commentService.deleteComment(commentId);
-    }
-}
+   }
