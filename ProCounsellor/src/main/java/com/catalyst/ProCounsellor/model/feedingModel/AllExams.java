@@ -11,6 +11,7 @@ public class AllExams {
 	@DocumentId
 	private String examId;
 	private String name;
+	private String country;
     private String level;
     private String category; //engineering, medical, law, management etc
     private String organization;

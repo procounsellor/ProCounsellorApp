@@ -2,14 +2,10 @@ package com.catalyst.ProCounsellor.model.feedingModel;
 
 import java.util.List;
 
-import com.google.cloud.firestore.annotation.DocumentId;
-
 import lombok.Data;
 
 @Data
 public class TrendingCoursesDescription {
-	@DocumentId
-	private String descriptionId;
     private String overview;
     private List<String> top_institutes;
     private List<String> skills_covered;
