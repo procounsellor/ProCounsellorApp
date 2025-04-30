@@ -23,6 +23,21 @@ public class CollegeRankingService {
         future.get(); // wait
         return college;
     }
+    
+    public List<CollegeRanking> createCollegeBulk(List<CollegeRanking> colleges) throws ExecutionException, InterruptedException {
+        Firestore firestore = FirestoreClient.getFirestore();
+        WriteBatch batch = firestore.batch();
+
+        for (CollegeRanking college : colleges) {
+            DocumentReference docRef = firestore.collection(COLLECTION_NAME).document();
+            college.setCollegeId(docRef.getId());
+            batch.set(docRef, college);
+        }
+
+        batch.commit().get();
+
+        return colleges;
+    }
 
     public CollegeRanking getCollegeById(String collegeId) throws ExecutionException, InterruptedException {
         Firestore firestore = FirestoreClient.getFirestore();

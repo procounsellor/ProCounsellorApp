@@ -20,6 +20,11 @@ public class CollegeRankingController {
     public CollegeRanking createCollege(@RequestBody CollegeRanking college) throws ExecutionException, InterruptedException {
         return collegeRankingService.createCollege(college);
     }
+    
+    @PostMapping("/bulk")
+    public List<CollegeRanking> createExamsBulk(@RequestBody List<CollegeRanking> colleges) throws ExecutionException, InterruptedException {
+        return collegeRankingService.createCollegeBulk(colleges);
+    }
 
     @GetMapping("/{collegeId}")
     public CollegeRanking getCollegeById(@PathVariable String collegeId) throws ExecutionException, InterruptedException {

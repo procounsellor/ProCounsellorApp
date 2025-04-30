@@ -29,6 +29,7 @@ public class User {
     private Courses interestedCourse;//right now, allowing only one degree interest per user. //Aligning with counsellor's expertise
     private List<String> subscribedCounsellorIds; 
     private List<String> followedCounsellorsIds;
+    private List<String> friendIds;
     private List<College> interestedColleges;
     private List<String> interestedLocationsForCollege;
     private List<String> userReviewIds;
