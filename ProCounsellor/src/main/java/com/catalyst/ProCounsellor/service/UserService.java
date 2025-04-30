@@ -183,6 +183,49 @@ public class UserService {
             throw new UserNotFoundException("Counsellor not found for the provided credentials.");
         }
     }
+    
+    public boolean addFriend(String userId1, String userId2) {
+        try {
+            User user1 = getUserById(userId1);
+            User user2 = getUserById(userId2);
+
+            if (user1 == null || user2 == null) {
+                return false;
+            }
+
+            if (user1.getFriendIds() == null) {
+                user1.setFriendIds(new ArrayList<>());
+            }
+
+            if (!user1.getFriendIds().contains(userId2)) {
+            	user1.getFriendIds().add(userId2);
+            }
+
+            if (user2.getFriendIds() == null) {
+            	user2.setFriendIds(new ArrayList<>());
+            }
+            
+            if(user2.getActivityLog() == null) {
+            	user2.setActivityLog(new ArrayList<>());
+            }
+
+            if (!user2.getFriendIds().contains(userId1)) {
+            	user2.getFriendIds().add(userId1);
+                String activityString = user1.getFirstName() + " " + user1.getLastName() + " (" + user1.getUserName() + ")" + " subscribed you.";
+                ActivityLog activity = sharedService.createActivityObject(activityString);
+                user2.getActivityLog().add(activity);
+            }
+
+            // Update both entities in Firebase
+            updateUser(user1);
+            updateUser(user2);
+
+            return true;
+        } catch (Exception e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
 
 
     
@@ -259,6 +302,25 @@ public class UserService {
                     }
                 }
                 return subscribedCounsellors;
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return null; // Return null if user not found or error occurs
+    }
+    
+    public List<User> getFriends(String userId) {
+        try {
+            User user = getUserById(userId);
+            if (user != null && user.getFriendIds() != null) {
+                List<User> friends = new ArrayList<>();
+                for (String friendId : user.getFriendIds()) {
+                    User friend = getUserById(friendId);
+                    if (friend != null) {
+                    	friends.add(friend);
+                    }
+                }
+                return friends;
             }
         } catch (Exception e) {
             e.printStackTrace();
@@ -355,6 +417,18 @@ public class UserService {
 	    }
 	    return false; // Return false if user or counsellor not found
 	}
+	
+	public boolean isFriendToUser(String userId1, String userId2) {
+	    try {
+	        User user1 = getUserById(userId1);
+	        if (user1 != null && user1.getFriendIds() != null) {
+	            return user1.getFriendIds().contains(userId2);
+	        }
+	    } catch (Exception e) {
+	        e.printStackTrace();
+	    }
+	    return false;
+	}
 
 	public boolean hasFollowedCounsellor(String userId, String counsellorId) {
 		try {
@@ -391,6 +465,33 @@ public class UserService {
 	        // Update both entities in Firebase
 	        updateUser(user);
 	        sharedService.updateCounsellor(counsellor);
+
+	        return true;
+	    } catch (Exception e) {
+	        e.printStackTrace();
+	        return false;
+	    }
+	}
+	
+	public boolean unfriend(String userId1, String userId2) {
+	    try {
+	        User user1 = getUserById(userId1);
+	        User user2 = getUserById(userId2);
+
+	        if (user1 == null || user2 == null) {
+	            return false;
+	        }
+
+	        if (user1.getFriendIds() != null) {
+	        	user1.getFriendIds().remove(userId2);
+	        }
+
+	        if (user2.getFriendIds() != null) {
+	        	user2.getFriendIds().remove(userId1);
+	        }
+
+	        updateUser(user1);
+	        updateUser(user2);
 
 	        return true;
 	    } catch (Exception e) {

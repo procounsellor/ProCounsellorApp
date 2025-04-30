@@ -23,6 +23,21 @@ public class AllExamsService {
         future.get();
         return exam;
     }
+    
+    public List<AllExams> createExamsBulk(List<AllExams> exams) throws ExecutionException, InterruptedException {
+        Firestore firestore = FirestoreClient.getFirestore();
+        WriteBatch batch = firestore.batch();
+
+        for (AllExams exam : exams) {
+            DocumentReference docRef = firestore.collection(COLLECTION_NAME).document();
+            exam.setExamId(docRef.getId());
+            batch.set(docRef, exam);
+        }
+
+        batch.commit().get(); // Wait for batch commit
+
+        return exams;
+    }
 
     public AllExams getExamById(String examId) throws ExecutionException, InterruptedException {
         Firestore firestore = FirestoreClient.getFirestore();

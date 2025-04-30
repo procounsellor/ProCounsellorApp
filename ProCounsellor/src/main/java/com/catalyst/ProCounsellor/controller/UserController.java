@@ -122,6 +122,42 @@ public class UserController {
 	    }
 	}
 	
+	@PostMapping("/{userId1}/add-friend/{userId2}")
+	public ResponseEntity<String> addFriend(@PathVariable String userId1, @PathVariable String userId2) {
+	    try {
+	    	boolean hasAlreadySubscribed = userService.isFriendToUser(userId1, userId2);
+	    	if(!hasAlreadySubscribed) {
+		        boolean result = userService.addFriend(userId1, userId2);
+		        if (result) {
+		            return ResponseEntity.ok("Successfully added as friend.");
+		        }
+		        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+		                             .body("Adding as friend failed. Either user1 or user2 does not exist.");
+	    	}
+	    	else {
+	    		return ResponseEntity.ok("Already friends.");
+	    	}
+	    } catch (Exception e) {
+	        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+	                             .body("An error occurred while adding as friend: " + e.getMessage());
+	    }
+	}
+
+	@GetMapping("/{userId}/friends")
+	public ResponseEntity<?> getFriends(@PathVariable String userId) {
+	    try {
+	        List<User> friends = userService.getFriends(userId);
+	        if (friends == null || friends.isEmpty()) {
+	            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+	                                 .body("No counsellors subscribed by user with ID: " + userId);
+	        }
+	        return ResponseEntity.ok(friends);
+	    } catch (Exception e) {
+	        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+	                             .body("An error occurred while retrieving subscribed counsellors: " + e.getMessage());
+	    }
+	}
+	
 	@GetMapping("/{userId}/is-subscribed/{counsellorId}")
 	public ResponseEntity<Boolean> isSubscribedToCounsellor(@PathVariable String userId, @PathVariable String counsellorId) {
 	    boolean isSubscribed = userService.isSubscribedToCounsellor(userId, counsellorId);
@@ -135,6 +171,12 @@ public class UserController {
 	        return ResponseEntity.ok(hasFollowed);
 	    }
 	    return ResponseEntity.ok(hasFollowed);
+	}
+	
+	@GetMapping("/{userId1}/is-friend/{userId2}")
+	public ResponseEntity<Boolean> isFriendToUser(@PathVariable String userId1, @PathVariable String userId2) {
+	    boolean isFriend = userService.isFriendToUser(userId1, userId2);
+	    return ResponseEntity.ok(isFriend);
 	}
 	
 	@DeleteMapping("/{userId}/unsubscribe/{counsellorId}")
@@ -186,6 +228,34 @@ public class UserController {
 	        } else {
 	            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
 	                    .body("An error occurred while trying to unfollow.");
+	        }
+	    } catch (Exception e) {
+	        e.printStackTrace();
+	        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+	                .body("An unexpected error occurred.");
+	    }
+	}
+	
+	@DeleteMapping("/{userId1}/unfriend/{userId2}")
+	public ResponseEntity<String> unfriend(
+	        @PathVariable String userId1, 
+	        @PathVariable String userId2) {
+	    try {
+	        // Check if the user1 is friend to the user2
+	        boolean isFriend = userService.isFriendToUser(userId1, userId2);
+
+	        if (!isFriend) {
+	            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+	                    .body("User1 is not friend to this user2.");
+	        }
+
+	        // Proceed to unfriend
+	        boolean result = userService.unfriend(userId1, userId2);
+	        if (result) {
+	            return ResponseEntity.ok("Successfully unfriended the user.");
+	        } else {
+	            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+	                    .body("An error occurred while trying to unfriend.");
 	        }
 	    } catch (Exception e) {
 	        e.printStackTrace();

@@ -20,6 +20,11 @@ public class AllExamsController {
     public AllExams createExam(@RequestBody AllExams exam) throws ExecutionException, InterruptedException {
         return allExamsService.createExam(exam);
     }
+    
+    @PostMapping("/bulk")
+    public List<AllExams> createExamsBulk(@RequestBody List<AllExams> exams) throws ExecutionException, InterruptedException {
+        return allExamsService.createExamsBulk(exams);
+    }
 
     @GetMapping("/{examId}")
     public AllExams getExamById(@PathVariable String examId) throws ExecutionException, InterruptedException {
