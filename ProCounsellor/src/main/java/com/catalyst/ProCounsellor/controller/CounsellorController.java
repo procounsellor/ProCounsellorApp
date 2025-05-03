@@ -146,7 +146,7 @@ public class CounsellorController {
 	    }
 	}
 	
-	@PatchMapping("/update-log/{userName}")
+	@PostMapping("/update-log/{userName}")
 	public ResponseEntity<String> updateCounsellorLog(
 	        @PathVariable String userName,
 	        @RequestBody Map<String, Object> updates) {
