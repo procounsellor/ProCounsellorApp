@@ -131,6 +131,20 @@ public class CounsellorController {
         }
     }
 	
+	@PatchMapping("/{counsellorId}/verify")
+	public ResponseEntity<Counsellor> verifyCounsellor(@PathVariable String counsellorId) {
+	    try {
+	        Map<String, Object> updates = new HashMap<>();
+	        updates.put("verified", true); // Only update the 'verified' field to true
+
+	        Counsellor updatedCounsellor = counsellorService.updateCounsellorFields(counsellorId, updates);
+	        return ResponseEntity.ok(updatedCounsellor);
+	    } catch (Exception e) {
+	        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null);
+	    }
+	}
+
+	
 	/**
      * Update user state API using PathVariable.
      *
