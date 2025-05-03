@@ -37,6 +37,8 @@ public class CounsellorController {
 	@Autowired
 	private PhotoService photoService;
 	
+	
+	
 	@GetMapping("/all-counsellors")
     public List<Counsellor> getAllCounsellors() {
         return counsellorService.getAllCounsellors();
@@ -143,6 +145,30 @@ public class CounsellorController {
 	        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null);
 	    }
 	}
+	
+	@PatchMapping("/counsellor/update-log/{userName}")
+	public ResponseEntity<String> updateCounsellorLog(
+	        @PathVariable String userName,
+	        @RequestBody Map<String, Object> updates) {
+
+	    try {
+	        String result = counsellorService.saveCounsellorUpdates(userName, updates);
+	        return ResponseEntity.ok(result);
+	    } catch (Exception e) {
+	        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Error: " + e.getMessage());
+	    }
+	}
+	
+	@PatchMapping("/counsellor/apply-updates/{userName}")
+	public ResponseEntity<String> applyUpdatesToCounsellor(@PathVariable String userName) {
+	    try {
+	        String result = counsellorService.applyPendingUpdates(userName);
+	        return ResponseEntity.ok(result);
+	    } catch (Exception e) {
+	        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Error: " + e.getMessage());
+	    }
+	}
+
 
 	
 	/**

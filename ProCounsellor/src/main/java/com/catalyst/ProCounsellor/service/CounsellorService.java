@@ -34,6 +34,53 @@ public class CounsellorService {
     private static final String COUNSELLORS = "counsellors";
     
     Firestore firestore = FirestoreClient.getFirestore();
+    
+    public String applyPendingUpdates(String userName) throws ExecutionException, InterruptedException {
+        Firestore db = FirestoreClient.getFirestore();
+
+        // Step 1: Get the update map from 'updates/{userName}'
+        DocumentSnapshot updatesSnapshot = db.collection("updates").document(userName).get().get();
+        if (!updatesSnapshot.exists()) {
+            throw new RuntimeException("No update document found for user: " + userName);
+        }
+
+        Map<String, Object> updates = updatesSnapshot.getData();
+        if (updates == null || updates.isEmpty()) {
+            throw new RuntimeException("Update data is empty for user: " + userName);
+        }
+
+        // Step 2: Remove metadata fields if needed
+        updates.remove("lastUpdatedAt");  // Optional: remove Firestore internal fields
+
+        // Step 3: Apply updates to counsellors/{userName}
+        DocumentReference counsellorDoc = db.collection("counsellors").document(userName);
+        ApiFuture<WriteResult> future = counsellorDoc.set(updates, SetOptions.merge());
+        WriteResult result = future.get();
+
+        return "Counsellor document updated successfully at " + result.getUpdateTime();
+    }
+
+    
+    public String saveCounsellorUpdates(String userName, Map<String, Object> updates)
+            throws ExecutionException, InterruptedException {
+
+        if (updates == null || updates.isEmpty()) {
+            throw new IllegalArgumentException("Update map cannot be null or empty.");
+        }
+
+        Firestore dbFirestore = FirestoreClient.getFirestore();
+        DocumentReference updateDocRef = dbFirestore.collection("updates").document(userName);
+
+        // Add a timestamp
+        updates.put("lastUpdatedAt", FieldValue.serverTimestamp());
+
+        // Merge the updates into the document
+        ApiFuture<WriteResult> future = updateDocRef.set(updates, SetOptions.merge());
+        WriteResult result = future.get();
+
+        return "Updates saved successfully at " + result.getUpdateTime();
+    }
+
 
     // Signup functionality
     public String signup(Counsellor counsellor) throws ExecutionException, InterruptedException {
