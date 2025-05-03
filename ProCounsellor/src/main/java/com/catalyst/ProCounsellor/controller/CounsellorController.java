@@ -146,7 +146,7 @@ public class CounsellorController {
 	    }
 	}
 	
-	@PatchMapping("/counsellor/update-log/{userName}")
+	@PatchMapping("/update-log/{userName}")
 	public ResponseEntity<String> updateCounsellorLog(
 	        @PathVariable String userName,
 	        @RequestBody Map<String, Object> updates) {
@@ -159,7 +159,7 @@ public class CounsellorController {
 	    }
 	}
 	
-	@PatchMapping("/counsellor/apply-updates/{userName}")
+	@PatchMapping("/apply-updates/{userName}")
 	public ResponseEntity<String> applyUpdatesToCounsellor(@PathVariable String userName) {
 	    try {
 	        String result = counsellorService.applyPendingUpdates(userName);
