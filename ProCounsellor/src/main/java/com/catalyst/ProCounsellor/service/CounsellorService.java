@@ -56,6 +56,10 @@ public class CounsellorService {
         DocumentReference counsellorDoc = db.collection("counsellors").document(userName);
         ApiFuture<WriteResult> future = counsellorDoc.set(updates, SetOptions.merge());
         WriteResult result = future.get();
+        
+        ApiFuture<WriteResult> deleteFuture = db.collection("updates").document(userName).delete();
+        deleteFuture.get(); // Wait for delete to complete
+
 
         return "Counsellor document updated successfully at " + result.getUpdateTime();
     }
