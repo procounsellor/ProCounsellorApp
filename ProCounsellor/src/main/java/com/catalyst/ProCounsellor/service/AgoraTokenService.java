@@ -252,9 +252,8 @@ public class AgoraTokenService {
                     CallHistory callHistory = dataSnapshot.getValue(CallHistory.class);
                     if (callHistory != null) {
                         // Ensure pickedTime exists before calculating duration
-                    	//TODO using start time right now which needs to be changed to picked time later on as picked time implementation has not been done yet.
-                        if (callHistory.getStartTime() != 0) {//getPICKED
-                            long durationMillis = endTimeMillis - callHistory.getStartTime();//getPICKED
+                        if (callHistory.getPickedTime() != 0) {
+                            long durationMillis = endTimeMillis - callHistory.getPickedTime();
                             callHistory.setDuration(formatDuration(durationMillis));
                             callRef.child("duration").setValueAsync(callHistory.getDuration());
                         } else {
@@ -295,8 +294,8 @@ public class AgoraTokenService {
                     CallHistory callHistory = dataSnapshot.getValue(CallHistory.class);
                     if (callHistory != null) {
                         // Ensure pickedTime exists before calculating duration
-                        if (callHistory.getStartTime() != 0) {//getPICKED
-                            long durationMillis = endTimeMillis - callHistory.getStartTime();//getPICKED
+                        if (callHistory.getPickedTime() != 0) {
+                            long durationMillis = endTimeMillis - callHistory.getPickedTime();
                             callHistory.setDuration(formatDuration(durationMillis));
                             callRef.child("duration").setValueAsync(callHistory.getDuration());
                         } else {
@@ -322,37 +321,60 @@ public class AgoraTokenService {
             }
         });
     }
- 
     
     public void saveCallDetailsToCallerAndReceiver(CallHistory callHistory, String callerId, String receiverId) {
         try {
-            DocumentSnapshot docRef = FirestoreClient.getFirestore()
-                .collection("users").document(callerId).get().get();
- 
-            boolean isCallerUser = docRef.exists(); // If
- 
-            User user = isCallerUser ? sharedService.getUserById(callerId) : sharedService.getUserById(receiverId);
-            Counsellor counsellor = isCallerUser ? sharedService.getCounsellorById(receiverId) : sharedService.getCounsellorById(callerId);
- 
-            if (user.getCallHistory() == null) {
-                user.setCallHistory(new ArrayList<>());
+            // Check who is the user and who is the counsellor
+            DocumentSnapshot callerDoc = FirestoreClient.getFirestore()
+                    .collection("users").document(callerId).get().get();
+            DocumentSnapshot receiverDoc = FirestoreClient.getFirestore()
+                    .collection("users").document(receiverId).get().get();
+
+            // Fetch caller and receiver user/counsellor objects
+            User callerUser = callerDoc.exists() ? sharedService.getUserById(callerId) : null;
+            Counsellor callerCounsellor = callerDoc.exists() ? null : sharedService.getCounsellorById(callerId);
+
+            User receiverUser = receiverDoc.exists() ? sharedService.getUserById(receiverId) : null;
+            Counsellor receiverCounsellor = receiverDoc.exists() ? null : sharedService.getCounsellorById(receiverId);
+
+            // Update call history for each entity if not null
+            if (callerUser != null) {
+                if (callerUser.getCallHistory() == null) {
+                    callerUser.setCallHistory(new ArrayList<>());
+                }
+                callerUser.getCallHistory().add(callHistory);
+                sharedService.updateUser(callerUser);
             }
- 
-            if (counsellor.getCallHistory() == null) {
-                counsellor.setCallHistory(new ArrayList<>());
+
+            if (callerCounsellor != null) {
+                if (callerCounsellor.getCallHistory() == null) {
+                    callerCounsellor.setCallHistory(new ArrayList<>());
+                }
+                callerCounsellor.getCallHistory().add(callHistory);
+                sharedService.updateCounsellor(callerCounsellor);
             }
- 
-            user.getCallHistory().add(callHistory);
-            counsellor.getCallHistory().add(callHistory);
- 
-            sharedService.updateUser(user);
-            sharedService.updateCounsellor(counsellor);
-            System.out.println("Call details updated for User & Counsellor.");
+
+            if (receiverUser != null) {
+                if (receiverUser.getCallHistory() == null) {
+                    receiverUser.setCallHistory(new ArrayList<>());
+                }
+                receiverUser.getCallHistory().add(callHistory);
+                sharedService.updateUser(receiverUser);
+            }
+
+            if (receiverCounsellor != null) {
+                if (receiverCounsellor.getCallHistory() == null) {
+                    receiverCounsellor.setCallHistory(new ArrayList<>());
+                }
+                receiverCounsellor.getCallHistory().add(callHistory);
+                sharedService.updateCounsellor(receiverCounsellor);
+            }
+
+            System.out.println("Call details updated for both Caller and Receiver.");
         } catch (Exception e) {
             System.err.println("Error saving call history: " + e.getMessage());
         }
     }
- 
  
     /**
      * Converts milliseconds into a formatted string.
