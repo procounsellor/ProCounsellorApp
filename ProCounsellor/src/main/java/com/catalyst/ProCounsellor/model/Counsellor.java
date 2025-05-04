@@ -46,4 +46,5 @@ public class Counsellor {
     private String fcmToken;
     private String voipToken;
     private String platform;
+    private String currectCallUUID;
 }
