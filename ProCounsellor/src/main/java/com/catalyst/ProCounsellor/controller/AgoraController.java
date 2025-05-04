@@ -47,9 +47,23 @@ public class AgoraController {
         return "✅ Notification sent successfully!";
     }
     
+    @PostMapping("/send-cancel-call-notification")
+    public String sendCancelCallNotification(@RequestBody CallNotificationRequest request) throws ExecutionException, InterruptedException {
+        agoraTokenService.sendVoIPCallNotification(
+            request.getVoipToken(), 
+            request.getSenderName(), 
+            request.getChannelId(),
+            request.getReceiverId(),
+            request.getCallType(),
+            true
+        );
+        return "✅ Notification cancelled successfully!";
+    }
+    
     // ✅ Create a class to map JSON request
     public static class CallNotificationRequest {
         private String receiverFCMToken;
+        private String voipToken;
         private String senderName;
         private String channelId;
         private String receiverId;
@@ -58,6 +72,9 @@ public class AgoraController {
         // Getters & Setters
         public String getReceiverFCMToken() { return receiverFCMToken; }
         public void setReceiverFCMToken(String receiverFCMToken) { this.receiverFCMToken = receiverFCMToken; }
+        
+        public String getVoipToken() { return voipToken; }
+        public void setVoipToken(String voipToken) { this.voipToken = voipToken; }
         
         public String getSenderName() { return senderName; }
         public void setSenderName(String senderName) { this.senderName = senderName; }

@@ -118,17 +118,20 @@ public class AgoraTokenService {
         }
 
         if ("ios".equalsIgnoreCase(platform) && voipToken != null && !voipToken.isEmpty()) {
-            sendVoIPCallNotification(voipToken, senderName, channelId, receiverId, callType);
+            sendVoIPCallNotification(voipToken, senderName, channelId, receiverId, callType, false);
         } else {
             sendFcmNotification(receiverFCMToken, senderName, channelId, receiverId, callType);
         }
     }
     
-    public void sendVoIPCallNotification(String voipToken, String callerName, String channelId, String receiverId, String callType) {
+    public void sendVoIPCallNotification(String voipToken, String callerName, String channelId, String receiverId, String callType, boolean isCancel) {
         try {
-            // Step 1: Save signaling info
-            agoraCallSignalling.child(receiverId).setValueAsync(new CallSession(callerName, channelId, callType));
-            startCall(channelId, callerName, receiverId, callType);
+            // Step 1: Save signaling info only if it's not a cancel request
+            if (!isCancel) {
+                agoraCallSignalling.child(receiverId)
+                    .setValueAsync(new CallSession(callerName, channelId, callType));
+                startCall(channelId, callerName, receiverId, callType);
+            }
 
             // Step 2: Load .p12 file from GCS
             String bucketName = "voipcert";
@@ -151,32 +154,40 @@ public class AgoraTokenService {
                     .setClientCredentials(p12Stream, p12Password)
                     .build();
 
-            // Step 4: Construct the JSON payload
+            // Step 4: Construct JSON payload
             Map<String, Object> payloadMap = new HashMap<>();
-            payloadMap.put("id", UUID.randomUUID().toString());
-            payloadMap.put("nameCaller", callerName);
-            payloadMap.put("handle", callerName); // ✅ REQUIRED to avoid crash
-            payloadMap.put("type", callType.equalsIgnoreCase("video") ? 1 : 0);
-            payloadMap.put("duration", 60000);
-            payloadMap.put("textAccept", "Answer");
-            payloadMap.put("textDecline", "Decline");
-            payloadMap.put("textMissedCall", "Missed call");
-            payloadMap.put("textCallback", "Call back");
 
-            Map<String, Object> ios = new HashMap<>();
-            ios.put("iconName", "CallKitIcon");
-            ios.put("handleType", "generic");
-            ios.put("supportsVideo", true);
-            ios.put("maximumCallGroups", 2);
-            ios.put("maximumCallsPerCallGroup", 1);
-            payloadMap.put("ios", ios);
+            if (isCancel) {
+                // Cancel Push Payload
+                payloadMap.put("type", "cancel_call");
+                payloadMap.put("channelId", channelId);
+            } else {
+                // Normal Incoming Call Payload
+                payloadMap.put("id", UUID.randomUUID().toString());
+                payloadMap.put("nameCaller", callerName);
+                payloadMap.put("handle", callerName); // ✅ REQUIRED
+                payloadMap.put("type", callType.equalsIgnoreCase("video") ? 1 : 0);
+                payloadMap.put("duration", 60000);
+                payloadMap.put("textAccept", "Answer");
+                payloadMap.put("textDecline", "Decline");
+                payloadMap.put("textMissedCall", "Missed call");
+                payloadMap.put("textCallback", "Call back");
 
-            Map<String, String> extra = new HashMap<>();
-            extra.put("channelId", channelId);
-            extra.put("callerName", callerName);
-            extra.put("receiverName", receiverId);
-            extra.put("callType", callType);
-            payloadMap.put("extra", extra);
+                Map<String, Object> ios = new HashMap<>();
+                ios.put("iconName", "CallKitIcon");
+                ios.put("handleType", "generic");
+                ios.put("supportsVideo", true);
+                ios.put("maximumCallGroups", 2);
+                ios.put("maximumCallsPerCallGroup", 1);
+                payloadMap.put("ios", ios);
+
+                Map<String, String> extra = new HashMap<>();
+                extra.put("channelId", channelId);
+                extra.put("callerName", callerName);
+                extra.put("receiverName", receiverId);
+                extra.put("callType", callType);
+                payloadMap.put("extra", extra);
+            }
 
             ObjectMapper objectMapper = new ObjectMapper();
             String payload = objectMapper.writeValueAsString(payloadMap);
@@ -196,9 +207,13 @@ public class AgoraTokenService {
                     apnsClient.sendNotification(pushNotification).get();
 
             if (response.isAccepted()) {
-                System.out.println("✅ VoIP call notification accepted by APNs");
-                System.out.println("perfect");            } else {
-                System.err.println("❌ VoIP call notification rejected: " + response.getRejectionReason());
+                if (isCancel) {
+                    System.out.println("✅ VoIP cancel notification accepted by APNs");
+                } else {
+                    System.out.println("✅ VoIP call notification accepted by APNs");
+                }
+            } else {
+                System.err.println("❌ VoIP notification rejected: " + response.getRejectionReason());
             }
 
             apnsClient.close().get();
