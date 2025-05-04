@@ -39,7 +39,7 @@ public class User {
     private String fcmToken;
     private String voipToken;
     private String platform;
-    private String currectCallUUID;
+    private String currectCallUUID;// handle call cancel
 }
 
        
