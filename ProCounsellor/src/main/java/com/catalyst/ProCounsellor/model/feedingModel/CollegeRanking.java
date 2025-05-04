@@ -6,7 +6,7 @@ import lombok.Data;
 
 @Data
 public class CollegeRanking {
-	@DocumentId
+	//@DocumentId
 	private String collegeId;
 	private String name;
     private String city;
