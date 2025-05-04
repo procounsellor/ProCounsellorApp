@@ -3,6 +3,7 @@ package com.catalyst.ProCounsellor.model;
 import java.util.List;
 import java.util.Map;
 
+import com.catalyst.ProCounsellor.model.feedingModel.CollegeRanking;
 import com.google.cloud.firestore.annotation.DocumentId;
 
 import lombok.Data;
@@ -30,7 +31,7 @@ public class User {
     private List<String> subscribedCounsellorIds; 
     private List<String> followedCounsellorsIds;
     private List<String> friendIds;
-    private List<College> interestedColleges;
+    private List<CollegeRanking> interestedColleges;
     private List<String> interestedLocationsForCollege;
     private List<String> userReviewIds;
     private List<Map<String,String>> chatIdsCreatedForUser;
