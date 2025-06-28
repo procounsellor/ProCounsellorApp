@@ -12,6 +12,8 @@ public class Counsellor {
 	@DocumentId
     private String userName;
 	
+	private String addressId;
+	
     private String firstName;   
     private String lastName;   
     private String phoneNumber; 
