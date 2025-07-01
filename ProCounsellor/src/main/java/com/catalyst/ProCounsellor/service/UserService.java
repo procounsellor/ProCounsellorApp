@@ -29,106 +29,146 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
 
+import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.annotation.*;
+
+import com.catalyst.ProCounsellor.config.JwtKeyProvider;
+import com.catalyst.ProCounsellor.service.UserService;
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseAuthException;
+
+import io.jsonwebtoken.Jwts;
+import java.util.Date;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 @Service
 public class UserService {
 	
 	@Autowired
 	private SharedService sharedService;
 	
+	@Autowired
+    private OTPService otpService;
+	
 	private final Firestore firestore;
 
     public UserService(Firestore firestore) {
         this.firestore = firestore;
 	}
-	//Firestore firestore = FirestoreClient.getFirestore();
 	
     private static final String USERS = "users";
+    private static final Logger logger = LoggerFactory.getLogger(UserService.class);
     
-    // New Signup functionality
+    public String generateAndSendOtp(@RequestParam String phoneNumber) {
+        String response = otpService.generateAndSendOtp(phoneNumber);
+        return response;
+    }
+    
+    public Map<String, Object> handleVerificationAndSignup(String phoneNumber, String otp)
+            throws FirebaseAuthException, ExecutionException, InterruptedException {
+
+        logger.info("Starting verification and signup/login flow for phone number: {}", phoneNumber);
+
+        if (!otpService.verifyOtp(phoneNumber, otp)) {
+            logger.warn("OTP verification failed for phone number: {}", phoneNumber);
+            throw new RuntimeException("Invalid or expired OTP. Please try again.");
+        }
+
+        logger.info("OTP verified successfully for phone number: {}", phoneNumber);
+
+        String message;
+        HttpStatus status;
+        String userId;
+        String jwtToken = null;
+        String firebaseCustomToken = null;
+
+        if (isPhoneNumberExists(phoneNumber)) {
+            logger.info("Phone number already exists: {}. Proceeding with login.", phoneNumber);
+            message = "Phone number already exists. User logged in successfully.";
+            status = HttpStatus.OK;
+            userId = getUserNameFromPhoneNumber(phoneNumber);
+        } else {
+            logger.info("Phone number not found: {}. Proceeding with signup.", phoneNumber);
+            message = userSignup(phoneNumber);
+            status = message.startsWith("Signup successful") ? HttpStatus.CREATED : HttpStatus.BAD_REQUEST;
+
+            if (status == HttpStatus.BAD_REQUEST) {
+                logger.error("Signup failed for phone number {}: {}", phoneNumber, message);
+                return Map.of("message", message, "status", status);
+            }
+
+            logger.info("Signup successful for phone number: {}. Waiting for userId to be retrievable...", phoneNumber);
+            Thread.sleep(1000); // Avoid this in production, prefer event-based confirmation or polling with retry logic
+            userId = getUserNameFromPhoneNumber(phoneNumber);
+        }
+
+        logger.info("Generating Firebase Custom Token and JWT for userId: {}", userId);
+        firebaseCustomToken = FirebaseAuth.getInstance().createCustomToken(userId);
+
+        jwtToken = Jwts.builder()
+                .setSubject(phoneNumber)
+                .setIssuedAt(new Date())
+                .setExpiration(new Date(System.currentTimeMillis() + 86400000L * 365))
+                .signWith(JwtKeyProvider.getSigningKey())
+                .compact();
+
+        logger.info("Token generation complete for phone number: {}", phoneNumber);
+
+        return Map.of(
+                "message", message,
+                "firebaseCustomToken", firebaseCustomToken,
+                "jwtToken", jwtToken,
+                "userId", userId,
+                "status", status
+        );
+    }
+    
     public String userSignup(String phoneNumber) throws ExecutionException, InterruptedException {
+        logger.info("Initiating user signup for phone number: {}", phoneNumber);
+
         Firestore dbFirestore = FirestoreClient.getFirestore();
 
         // Check for uniqueness of phoneNumber
         CollectionReference usersCollection = dbFirestore.collection(USERS);
         Query phoneQuery = usersCollection.whereEqualTo("phoneNumber", phoneNumber);
 
-        if (!phoneQuery.get().get().isEmpty()) {
+        boolean userExists = !phoneQuery.get().get().isEmpty();
+        if (userExists) {
+            logger.warn("Signup attempt failed. Phone number already exists: {}", phoneNumber);
             return "Phone number already exists: " + phoneNumber;
         }
 
         // Create new user object
         User user = new User();
         user.setPhoneNumber(phoneNumber);
-        user.setUserName(phoneNumber.replaceFirst("^\\+\\d{2}", ""));
+        String userName = phoneNumber.replaceFirst("^\\+\\d{2}", "");
+        user.setUserName(userName);
         user.setRole("user");
 
         // Save new user
-        DocumentReference userDocRef = dbFirestore.collection(USERS).document(user.getUserName());
+        logger.info("Creating new user with ID: {}", userName);
+        DocumentReference userDocRef = dbFirestore.collection(USERS).document(userName);
         ApiFuture<WriteResult> collectionsApiFuture = userDocRef.set(user);
+        WriteResult result = collectionsApiFuture.get();
 
-        return "Signup successful! User ID: " + user.getUserName();
+        logger.info("User created successfully. ID: {}, Timestamp: {}", userName, result.getUpdateTime());
+
+        return "Signup successful! User ID: " + userName;
     }
     
     public boolean isPhoneNumberExists(String phoneNumber) throws ExecutionException, InterruptedException {
+        logger.info("Checking existence of phone number: {}", phoneNumber);
+
         Firestore dbFirestore = FirestoreClient.getFirestore();
         CollectionReference usersCollection = dbFirestore.collection(USERS);
         Query phoneQuery = usersCollection.whereEqualTo("phoneNumber", phoneNumber);
 
-        return !phoneQuery.get().get().isEmpty();
-    }
-    
+        boolean exists = !phoneQuery.get().get().isEmpty();
+        logger.info("Phone number {} existence: {}", phoneNumber, exists);
 
-    // Signup functionality
-    public String signup(User user) throws ExecutionException, InterruptedException {
-        Firestore dbFirestore = FirestoreClient.getFirestore();
-
-        // Validate mandatory fields
-        if (user.getUserName() == null || user.getUserName().isEmpty()) {
-            return "UserName is mandatory and cannot be null or empty.";
-        }
-        if (user.getPhoneNumber() == null || user.getPhoneNumber().isEmpty()) {
-            return "Phone number is mandatory and cannot be null or empty.";
-        }
-        if (user.getEmail() == null || user.getEmail().isEmpty()) {
-            return "Email is mandatory and cannot be null or empty.";
-        }
-        if (user.getFirstName() == null || user.getFirstName().isEmpty()) {
-            return "First name is mandatory and cannot be null or empty.";
-        }
-        if (user.getLastName() == null || user.getLastName().isEmpty()) {
-            return "Last name is mandatory and cannot be null or empty.";
-        }
-        if (user.getPassword() == null || user.getPassword().isEmpty()) {
-            return "Password is mandatory and cannot be null or empty.";
-        }
-        if (user.getUserInterestedStateOfCounsellors() == null || user.getUserInterestedStateOfCounsellors().isEmpty()) {
-            return "User interested state of counsellors cannot be null or empty.";
-        }
-        if (user.getInterestedCourse() == null || user.getInterestedCourse().toString().isEmpty()) {
-            return "Interested course cannot be null or empty.";
-        }
-
-        // Check for uniqueness of userName
-        DocumentReference userDocRef = dbFirestore.collection(USERS).document(user.getUserName());
-        if (userDocRef.get().get().exists()) {
-            return "User already exists with userName: " + user.getUserName();
-        }
-
-        // Check for uniqueness of phoneNumber and email
-        CollectionReference usersCollection = dbFirestore.collection(USERS);
-        Query phoneQuery = usersCollection.whereEqualTo("phoneNumber", user.getPhoneNumber());
-        Query emailQuery = usersCollection.whereEqualTo("email", user.getEmail());
-
-        if (!phoneQuery.get().get().isEmpty()) {
-            return "Phone number already exists: " + user.getPhoneNumber();
-        }
-        if (!emailQuery.get().get().isEmpty()) {
-            return "Email already exists: " + user.getEmail();
-        }
-
-        // Save new user
-        ApiFuture<WriteResult> collectionsApiFuture = userDocRef.set(user);
-        return "Signup successful! User ID: " + user.getUserName();
+        return exists;
     }
 
     // Signin functionality

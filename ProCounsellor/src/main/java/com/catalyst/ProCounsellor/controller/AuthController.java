@@ -15,7 +15,6 @@ import com.catalyst.ProCounsellor.model.Courses;
 import com.catalyst.ProCounsellor.model.User;
 import com.catalyst.ProCounsellor.service.AdminService;
 import com.catalyst.ProCounsellor.service.CounsellorService;
-import com.catalyst.ProCounsellor.service.OTPService;
 import com.catalyst.ProCounsellor.service.UserService;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseAuthException;
@@ -30,7 +29,6 @@ import java.util.concurrent.ExecutionException;
 @RestController
 @RequestMapping("/api/auth")
 public class AuthController {
-
     @Autowired
     private UserService userService;
     
@@ -40,9 +38,54 @@ public class AuthController {
     @Autowired
     private AdminService adminService;
     
-    @Autowired
-    private OTPService otpService;
+    @PostMapping("/generateOtp")
+    public ResponseEntity<String> generateOtp(@RequestParam String phoneNumber) {
+    	phoneNumber=phoneNumber.replace(" ", "+");
+        if (phoneNumber == null || phoneNumber.isEmpty()) {
+            return ResponseEntity.badRequest().body("Phone number is mandatory and cannot be null or empty.");
+        }
+        String response = userService.generateAndSendOtp(phoneNumber);
+        return ResponseEntity.ok(response);
+    }
+    
+    @PostMapping("/verifyAndUserSignup")
+    public ResponseEntity<Map<String, Object>> verifyAndSignupOrSignin(
+            @RequestParam String phoneNumber, @RequestParam String otp) {
+        
+        phoneNumber = phoneNumber.replace(" ", "+");
 
+        if (phoneNumber == null || phoneNumber.isEmpty()) {
+            return ResponseEntity.badRequest().body(Map.of("message", "Phone number is mandatory and cannot be null or empty."));
+        }
+
+        try {
+            Map<String, Object> result = userService.handleVerificationAndSignup(phoneNumber, otp);
+            return ResponseEntity.status((HttpStatus) result.get("status")).body(result);
+        } catch (RuntimeException | FirebaseAuthException | InterruptedException | ExecutionException e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("message", "An error occurred: " + e.getMessage()));
+        }
+    }
+
+    @GetMapping("/isUserDetailsNull")
+    public ResponseEntity<Boolean> isUserDetailsNull(@RequestParam String userId) throws ExecutionException, InterruptedException {
+        if (userId == null || userId.isEmpty()) {
+            return ResponseEntity.badRequest().body(false);
+        }
+
+        // Fetch the user details
+        User user = userService.getUserById(userId);
+        if (user == null) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(true);
+        }
+
+        // Check if both fields are null
+        boolean isNull = (user.getUserInterestedStateOfCounsellors() == null || user.getUserInterestedStateOfCounsellors().isEmpty())
+                && user.getInterestedCourse() == null;
+
+        return ResponseEntity.ok(isNull);
+    }
+    
     @PostMapping("/counsellorSignup")
     public ResponseEntity<Map<String, Object>> counsellorSignup(
             @RequestParam String firstName,
@@ -70,18 +113,17 @@ public class AuthController {
             counsellor.setStateOfCounsellor(stateOfCounsellor);
             counsellor.setExpertise(expertise);
 
-            String message = counsellorService.signup(counsellor);
+            String message = counsellorService.counsellorSignup(counsellor);
             return buildResponse(message, HttpStatus.CREATED);
         } catch (Exception e) {
             return buildResponse(e.getMessage(), HttpStatus.BAD_REQUEST);
         }
     }
 
-
     @PostMapping("/counsellorSignin")
     public ResponseEntity<Map<String, Object>> counsellorSignin(@RequestParam String identifier, @RequestParam String password) throws ExecutionException, InterruptedException, FirebaseAuthException {
         try {
-            HttpStatus status = counsellorService.signin(identifier, password);
+            HttpStatus status = counsellorService.counsellorSignin(identifier, password);
             String jwtToken = null;
             String userId = counsellorService.getCounsellorId(identifier);
             String firebaseCustomToken = null;
@@ -110,8 +152,6 @@ public class AuthController {
             return buildResponse(e.getMessage(), HttpStatus.BAD_REQUEST);
         }
     }
-
-
 
     @PostMapping("/adminSignup")
     public ResponseEntity<Map<String, Object>> adminSignup(@RequestBody Admin admin) throws ExecutionException, InterruptedException {
@@ -157,92 +197,5 @@ public class AuthController {
         response.put("message", message);
         response.put("status", status.value());
         return new ResponseEntity<>(response, status);
-    }
-    
-    @PostMapping("/generateOtp")
-    public ResponseEntity<String> generateOtp(@RequestParam String phoneNumber) {
-    	phoneNumber=phoneNumber.replace(" ", "+");
-        if (phoneNumber == null || phoneNumber.isEmpty()) {
-            return ResponseEntity.badRequest().body("Phone number is mandatory and cannot be null or empty.");
-        }
-        String response = otpService.generateAndSendOtp(phoneNumber);
-        return ResponseEntity.ok(response);
-    }
-    
-    @PostMapping("/verifyAndUserSignup")
-    public ResponseEntity<Map<String, Object>> verifyAndSignupOrSignin(
-            @RequestParam String phoneNumber, @RequestParam String otp) throws ExecutionException, InterruptedException, FirebaseAuthException {
-    	
-    	phoneNumber=phoneNumber.replace(" ", "+");
-        if (phoneNumber == null || phoneNumber.isEmpty()) {
-            return ResponseEntity.badRequest().body(Map.of("message", "Phone number is mandatory and cannot be null or empty."));
-        }
-
-        if (!otpService.verifyOtp(phoneNumber, otp)) {
-            return ResponseEntity.badRequest().body(Map.of("message", "Invalid or expired OTP. Please try again."));
-        }
-
-        String responseMessage;
-        HttpStatus responseStatus;
-        String jwtToken = null;
-        String userId;
-        String firebaseCustomToken = null;
-        
-		if (userService.isPhoneNumberExists(phoneNumber)) {
-            responseMessage = "Phone number already exists. User logged in successfully.";
-            responseStatus = HttpStatus.OK;
-            userId = userService.getUserNameFromPhoneNumber(phoneNumber);
-        } else {
-            responseMessage = userService.userSignup(phoneNumber);
-            responseStatus = responseMessage.startsWith("Signup successful") ? HttpStatus.CREATED : HttpStatus.BAD_REQUEST; // New signup
-
-            try {
-                Thread.sleep(1000); // Sleep for 1 second
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt(); // Restore interrupted status
-                throw new RuntimeException("Thread was interrupted while waiting", e);
-            }
-
-            // Fetch userId after delay
-            userId = userService.getUserNameFromPhoneNumber(phoneNumber);
-        }
-
-        if (responseStatus != HttpStatus.BAD_REQUEST) {
-        	firebaseCustomToken = FirebaseAuth.getInstance().createCustomToken(userId);
-            // Generate JWT Token using the centralized key
-            jwtToken = Jwts.builder()
-                    .setSubject(phoneNumber)
-                    .setIssuedAt(new Date())
-                    .setExpiration(new Date(System.currentTimeMillis() + 86400000 * 365))
-                    .signWith(JwtKeyProvider.getSigningKey())
-                    .compact();
-        }
-
-        return ResponseEntity.status(responseStatus).body(Map.of(
-                "message", responseMessage,
-                "firebaseCustomToken", firebaseCustomToken,
-                "jwtToken", jwtToken,
-                "userId", userId));
-    }
-
-    
-    @GetMapping("/isUserDetailsNull")
-    public ResponseEntity<Boolean> isUserDetailsNull(@RequestParam String userId) throws ExecutionException, InterruptedException {
-        if (userId == null || userId.isEmpty()) {
-            return ResponseEntity.badRequest().body(false);
-        }
-
-        // Fetch the user details
-        User user = userService.getUserById(userId);
-        if (user == null) {
-        	System.out.println("nulllll");
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(true);
-        }
-
-        // Check if both fields are null
-        boolean isNull = (user.getUserInterestedStateOfCounsellors() == null || user.getUserInterestedStateOfCounsellors().isEmpty())
-                && user.getInterestedCourse() == null;
-
-        return ResponseEntity.ok(isNull);
     }
 }
