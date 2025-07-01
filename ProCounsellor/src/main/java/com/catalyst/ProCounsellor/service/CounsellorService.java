@@ -87,7 +87,7 @@ public class CounsellorService {
 
 
     // Signup functionality
-    public String signup(Counsellor counsellor) throws ExecutionException, InterruptedException {
+    public String counsellorSignup(Counsellor counsellor) throws ExecutionException, InterruptedException {
         Firestore dbFirestore = FirestoreClient.getFirestore();
         
         counsellor.setUserName(counsellor.getPhoneNumber().replaceFirst("^\\+\\d{2}", ""));
@@ -144,7 +144,7 @@ public class CounsellorService {
 
 
     // Signin functionality
-    public HttpStatus signin(String identifier, String password) throws ExecutionException, InterruptedException {
+    public HttpStatus counsellorSignin(String identifier, String password) throws ExecutionException, InterruptedException {
         Firestore dbFirestore = FirestoreClient.getFirestore();
         CollectionReference counsellorsCollection = dbFirestore.collection(COUNSELLORS);
 

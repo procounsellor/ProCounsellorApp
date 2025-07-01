@@ -1,6 +1,7 @@
 package com.catalyst.ProCounsellor.controller;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
@@ -26,7 +27,12 @@ import com.catalyst.ProCounsellor.model.Courses;
 import com.catalyst.ProCounsellor.model.User;
 import com.catalyst.ProCounsellor.service.PhotoService;
 import com.catalyst.ProCounsellor.service.UserService;
+import com.google.api.core.ApiFuture;
 import com.google.api.gax.rpc.NotFoundException;
+import com.google.cloud.firestore.DocumentSnapshot;
+import com.google.cloud.firestore.Firestore;
+import com.google.cloud.firestore.QuerySnapshot;
+import com.google.firebase.cloud.FirestoreClient;
 
 @RestController
 @RequestMapping("/api/user")
@@ -120,6 +126,32 @@ public class UserController {
 	        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
 	                             .body("An error occurred while retrieving followed counsellors: " + e.getMessage());
 	    }
+	}
+	
+	@GetMapping("/course-types")
+	public ResponseEntity<List<String>> getCourseTypes() throws Exception {
+	    Firestore db = FirestoreClient.getFirestore();
+	    ApiFuture<QuerySnapshot> future = db.collection("courseTypes").get();
+	    List<String> courses = new ArrayList<>();
+
+	    for (DocumentSnapshot doc : future.get().getDocuments()) {
+	        courses.add(doc.getString("name"));
+	    }
+
+	    return ResponseEntity.ok(courses);
+	}
+
+	@GetMapping("/states")
+	public ResponseEntity<List<String>> getStates() throws Exception {
+	    Firestore db = FirestoreClient.getFirestore();
+	    ApiFuture<QuerySnapshot> future = db.collection("states").get();
+	    List<String> states = new ArrayList<>();
+
+	    for (DocumentSnapshot doc : future.get().getDocuments()) {
+	        states.add(doc.getString("name"));
+	    }
+
+	    return ResponseEntity.ok(states);
 	}
 	
 	@PostMapping("/{userId1}/add-friend/{userId2}")
