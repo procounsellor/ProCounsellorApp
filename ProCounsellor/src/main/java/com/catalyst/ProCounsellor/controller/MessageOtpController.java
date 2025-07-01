@@ -1,16 +1,13 @@
 package com.catalyst.ProCounsellor.controller;
 
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.client.RestTemplate;
-
 @RestController
 @RequestMapping("api/phoneOtp")
 public class MessageOtpController {
 
-    @Value("${otp.api.key}")
-    private String apiKey;
+    private String apiKey = System.getenv("OTP_API_KEY");
 
     private final String BASE_URL = "https://2factor.in/API/V1/";
 
