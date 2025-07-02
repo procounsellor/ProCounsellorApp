@@ -9,9 +9,9 @@ import com.catalyst.ProCounsellor.config.JwtKeyProvider;
 import com.catalyst.ProCounsellor.exception.InvalidCredentialsException;
 import com.catalyst.ProCounsellor.exception.UserNotFoundException;
 import com.catalyst.ProCounsellor.model.Admin;
-import com.catalyst.ProCounsellor.model.AllowedStates;
 import com.catalyst.ProCounsellor.model.Counsellor;
-import com.catalyst.ProCounsellor.model.Courses;
+import com.catalyst.ProCounsellor.model.Course;
+import com.catalyst.ProCounsellor.model.States;
 import com.catalyst.ProCounsellor.model.User;
 import com.catalyst.ProCounsellor.service.AdminService;
 import com.catalyst.ProCounsellor.service.CounsellorService;
@@ -94,8 +94,8 @@ public class AuthController {
             @RequestParam String email,
             @RequestParam String password,
             @RequestParam Double ratePerYear,
-            @RequestParam AllowedStates stateOfCounsellor,
-            @RequestParam List<Courses> expertise) throws ExecutionException, InterruptedException {
+            @RequestParam String stateOfCounsellor,
+            @RequestParam List<String> expertise) throws ExecutionException, InterruptedException {
 
         try {
             // Create a new Counsellor object and set the fields

@@ -25,9 +25,9 @@ public class User {
     private List<ActivityLog> activityLog;
     private List<CallHistory> callHistory;
     private String photo;
-    private List<AllowedStates> userInterestedStateOfCounsellors;
+    private List<String> userInterestedStateOfCounsellors;
     //mandatory field
-    private Courses interestedCourse;//right now, allowing only one degree interest per user. //Aligning with counsellor's expertise
+    private String interestedCourse; //right now, allowing only one degree interest per user. //Aligning with counsellor's expertise
     private List<String> subscribedCounsellorIds; 
     private List<String> followedCounsellorsIds;
     private List<String> friendIds;

@@ -4,9 +4,9 @@ package com.catalyst.ProCounsellor.service;
 import com.catalyst.ProCounsellor.exception.InvalidCredentialsException;
 import com.catalyst.ProCounsellor.exception.UserNotFoundException;
 import com.catalyst.ProCounsellor.model.ActivityLog;
-import com.catalyst.ProCounsellor.model.AllowedStates;
 import com.catalyst.ProCounsellor.model.Counsellor;
-import com.catalyst.ProCounsellor.model.Courses;
+import com.catalyst.ProCounsellor.model.Course;
+import com.catalyst.ProCounsellor.model.States;
 import com.catalyst.ProCounsellor.model.User;
 import com.catalyst.ProCounsellor.model.UserState;
 import com.google.api.core.ApiFuture;
@@ -64,6 +64,25 @@ public class UserService {
     public String generateAndSendOtp(@RequestParam String phoneNumber) {
         String response = otpService.generateAndSendOtp(phoneNumber);
         return response;
+    }
+    
+    public User getUserById(String userId) throws ExecutionException, InterruptedException {
+        logger.info("Fetching user by ID: {}", userId);
+
+        try {
+            DocumentSnapshot snapshot = firestore.collection("users").document(userId).get().get();
+
+            if (snapshot.exists()) {
+                logger.info("User found for ID: {}", userId);
+                return snapshot.toObject(User.class);
+            } else {
+                logger.warn("No user found for ID: {}", userId);
+                return null;
+            }
+        } catch (Exception e) {
+            logger.error("Error fetching user by ID [{}]: {}", userId, e.getMessage(), e);
+            throw e;
+        }
     }
     
     public Map<String, Object> handleVerificationAndSignup(String phoneNumber, String otp)
@@ -170,59 +189,32 @@ public class UserService {
 
         return exists;
     }
+    
+	public User updateUserFields(String userId, Map<String, Object> updates) throws ExecutionException, InterruptedException {
+	    DocumentReference docRef = firestore.collection(USERS).document(userId);
+	    
+	    logger.info("Attempting to update user [{}] with fields: {}", userId, updates);
 
-    // Signin functionality
-    public String signin(String identifier, String password) throws ExecutionException, InterruptedException {
-        Firestore dbFirestore = FirestoreClient.getFirestore();
-        CollectionReference userCollection = dbFirestore.collection(USERS);
+	    try {
+	        // Perform the update
+	        ApiFuture<WriteResult> writeResult = docRef.update(updates);
+	        logger.info("Update submitted. Write time: {}", writeResult.get().getUpdateTime());
 
-        // Determine the identifier type and query the Firestore
-        Query query;
-        if (identifier.contains("@")) {
-            // If it contains '@', treat it as email
-            query = userCollection.whereEqualTo("email", identifier);
-        } else if (identifier.matches("\\d+")) {
-            // If it's numeric, treat it as phone number
-            query = userCollection.whereEqualTo("phoneNumber", identifier);
-        } else {
-            // Otherwise, treat it as userName (DocumentId)
-            DocumentReference docRef = userCollection.document(identifier);
+	        // Fetch the updated user
+	        DocumentSnapshot document = docRef.get().get();
 
-            // Check if the document exists
-            DocumentSnapshot documentSnapshot = docRef.get().get();
-            if (documentSnapshot.exists()) {
-                User existingUser = documentSnapshot.toObject(User.class);
-
-                // Validate the password
-                if (existingUser.getPassword().equals(password)) {
-                    return "Signin successful for User ID: " + identifier;
-                } else {
-                    throw new InvalidCredentialsException("Invalid credentials provided.");
-                }
-            } else {
-                throw new UserNotFoundException("User not found for userName: " + identifier);
-            }
-        }
-
-        // Execute the query for email or phoneNumber
-        List<QueryDocumentSnapshot> documents = query.get().get().getDocuments();
-
-        if (!documents.isEmpty()) {
-            // Fetch the first matching document
-            QueryDocumentSnapshot document = documents.get(0);
-            User existingUser = document.toObject(User.class);
-
-            // Validate the password
-            if (existingUser.getPassword().equals(password)) {
-                String userName = document.getId(); // Get the DocumentId as userName
-                return "Signin successful for User ID: " + userName;
-            } else {
-                throw new InvalidCredentialsException("Invalid credentials provided.");
-            }
-        } else {
-            throw new UserNotFoundException("Counsellor not found for the provided credentials.");
-        }
-    }
+	        if (document.exists()) {
+	            logger.info("Successfully fetched updated user [{}]", userId);
+	            return document.toObject(User.class);
+	        } else {
+	            logger.warn("User with ID [{}] not found after update attempt", userId);
+	            throw new RuntimeException("User not found");
+	        }
+	    } catch (Exception e) {
+	        logger.error("Failed to update user [{}]: {}", userId, e.getMessage(), e);
+	        throw e;
+	    }
+	}
     
     public boolean addFriend(String userId1, String userId2) {
         try {
@@ -580,22 +572,6 @@ public class UserService {
         firestore.collection(USERS).document(userId).update("photo", photoUrl);
 	}
 	
-	 public User updateUserFields(String userId, Map<String, Object> updates) throws ExecutionException, InterruptedException {
-	        DocumentReference docRef = firestore.collection(USERS).document(userId);
-
-	        // Perform the update
-	        ApiFuture<WriteResult> writeResult = docRef.update(updates);
-
-	        // Fetch the updated user
-	        DocumentSnapshot document = docRef.get().get();
-	        if (document.exists()) {
-	            return document.toObject(User.class);
-	        } else {
-	            throw new RuntimeException("User not found");
-	        }
-	    }
-
-	 
 	 /**
 	 * Update the user state in Firebase Realtime Database.
 	 *
@@ -683,7 +659,7 @@ public class UserService {
 		    return isOnline[0];
 		}
 	 
-	 public List<Counsellor> getCounsellorsByCourse(Courses course) throws ExecutionException, InterruptedException {
+	 public List<Counsellor> getCounsellorsByCourse(String course) throws ExecutionException, InterruptedException {
 	        ApiFuture<QuerySnapshot> future = firestore
 	                .collection("counsellors")
 	                .whereArrayContains("expertise", course) 
@@ -699,7 +675,7 @@ public class UserService {
 	     * Fetch counsellors whose 'expertise' (list of Courses) contains the user’s interestedCourse
 	     * AND whose 'stateOfCounsellor' equals the specified state.
 	     */
-	    public List<Counsellor> getCounsellorsByCourseAndState(Courses course, AllowedStates state)
+	    public List<Counsellor> getCounsellorsByCourseAndState(Course course, States state)
 	            throws ExecutionException, InterruptedException {
 	        
 	        ApiFuture<QuerySnapshot> future = firestore
@@ -747,11 +723,6 @@ public class UserService {
 	        }
 	    }
 	    
-	    public User getUserById(String userId) throws ExecutionException, InterruptedException {
-	        DocumentSnapshot snapshot = firestore.collection("users").document(userId).get().get();
-	        return snapshot.exists() ? snapshot.toObject(User.class) : null;
-	    }
-
 		public List<User> getAllUsers() {
 	        Firestore firestore = FirestoreClient.getFirestore();
 	        ApiFuture<QuerySnapshot> querySnapshot = firestore.collection(USERS).get();
