@@ -29,10 +29,10 @@ public class Counsellor {
     private String role;
     private List<ActivityLog> activityLog;
     private List<CallHistory> callHistory;
-    private AllowedStates stateOfCounsellor;
+    private String stateOfCounsellor;
     private List<Map<String,String>> chatIdsCreatedForCounsellor;
     private Double ratePerYear;
-    private List<Courses> expertise; //align with user's interested course
+    private List<String> expertise; //align with user's interested course
     private Integer noOfClients;
     private Integer noOfFollowers;
     private List<String> clientIds;
