@@ -1,5 +1,6 @@
 package com.catalyst.ProCounsellor.service;
 
+import com.catalyst.ProCounsellor.config.JwtKeyProvider;
 import com.catalyst.ProCounsellor.exception.InvalidCredentialsException;
 import com.catalyst.ProCounsellor.exception.UserNotFoundException;
 import com.catalyst.ProCounsellor.model.Counsellor;
@@ -7,6 +8,8 @@ import com.catalyst.ProCounsellor.model.CounsellorState;
 import com.catalyst.ProCounsellor.model.User;
 import com.google.api.core.ApiFuture;
 import com.google.cloud.firestore.*;
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseAuthException;
 import com.google.firebase.cloud.FirestoreClient;
 import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
@@ -14,11 +17,16 @@ import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.database.ValueEventListener;
 
+import io.jsonwebtoken.Jwts;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -31,166 +39,225 @@ public class CounsellorService {
 	@Autowired
 	private SharedService sharedService;
 	
+	@Autowired
+    private OTPService otpService;
+	
+	@Autowired 
+    private MailOtpService mailOtpService;
+	
     private static final String COUNSELLORS = "counsellors";
     
     Firestore firestore = FirestoreClient.getFirestore();
     
-    public String applyPendingUpdates(String userName) throws ExecutionException, InterruptedException {
-        Firestore db = FirestoreClient.getFirestore();
-
-        // Step 1: Get the update map from 'updates/{userName}'
-        DocumentSnapshot updatesSnapshot = db.collection("updates").document(userName).get().get();
-        if (!updatesSnapshot.exists()) {
-            throw new RuntimeException("No update document found for user: " + userName);
-        }
-
-        Map<String, Object> updates = updatesSnapshot.getData();
-        if (updates == null || updates.isEmpty()) {
-            throw new RuntimeException("Update data is empty for user: " + userName);
-        }
-
-        // Step 2: Remove metadata fields if needed
-        updates.remove("lastUpdatedAt");  // Optional: remove Firestore internal fields
-
-        // Step 3: Apply updates to counsellors/{userName}
-        DocumentReference counsellorDoc = db.collection("counsellors").document(userName);
-        ApiFuture<WriteResult> future = counsellorDoc.set(updates, SetOptions.merge());
-        WriteResult result = future.get();
-        
-        ApiFuture<WriteResult> deleteFuture = db.collection("updates").document(userName).delete();
-        deleteFuture.get(); // Wait for delete to complete
-
-
-        return "Counsellor document updated successfully at " + result.getUpdateTime();
-    }
-
+    private static final Logger logger = LoggerFactory.getLogger(CounsellorService.class);
     
-    public String saveCounsellorUpdates(String userName, Map<String, Object> updates)
-            throws ExecutionException, InterruptedException {
+   
+    public boolean verifyCounsellorPhoneNumber(String phoneNumber, String otp)
+            throws FirebaseAuthException, ExecutionException, InterruptedException {
 
-        if (updates == null || updates.isEmpty()) {
-            throw new IllegalArgumentException("Update map cannot be null or empty.");
+        logger.info("Starting verification and signup/login flow for phone number: {}", phoneNumber);
+
+        if (!otpService.verifyOtp(phoneNumber, otp)) {
+            logger.warn("OTP verification failed for phone number: {}", phoneNumber);
+            throw new RuntimeException("Invalid or expired OTP. Please try again.");
         }
 
-        Firestore dbFirestore = FirestoreClient.getFirestore();
-        DocumentReference updateDocRef = dbFirestore.collection("updates").document(userName);
-
-        // Add a timestamp
-        updates.put("lastUpdatedAt", FieldValue.serverTimestamp());
-
-        // Merge the updates into the document
-        ApiFuture<WriteResult> future = updateDocRef.set(updates, SetOptions.merge());
-        WriteResult result = future.get();
-
-        return "Updates saved successfully at " + result.getUpdateTime();
+        logger.info("OTP verified successfully for phone number: {}", phoneNumber);
+		return true;
     }
+    
+    public String generateMailOtp(String email) {
+		return mailOtpService.generateOtp(email);
+	}
 
+
+	public boolean verifyMailOtp(String email, String otp) {
+		return mailOtpService.verifyOtp(email, otp);
+	}
 
     // Signup functionality
-    public String counsellorSignup(Counsellor counsellor) throws ExecutionException, InterruptedException {
+	public String counsellorSignup(Counsellor counsellor) throws Exception {
+		if(!counsellor.isEmailOtpVerified() || !counsellor.isPhoneOtpVerified()) {
+			throw new Exception("Email or phone number has not been verified yet");
+		}
         Firestore dbFirestore = FirestoreClient.getFirestore();
-        
+
         counsellor.setUserName(counsellor.getPhoneNumber().replaceFirst("^\\+\\d{2}", ""));
         counsellor.setRole("counsellor");
 
-        // Validate mandatory fields
+        logger.info("Attempting signup for counsellor with email: {}", counsellor.getEmail());
+
+        // Validation
         if (counsellor.getFirstName() == null || counsellor.getFirstName().isEmpty()) {
+            logger.warn("Validation failed: First name is missing");
             return "First name is mandatory and cannot be null or empty.";
         }
         if (counsellor.getLastName() == null || counsellor.getLastName().isEmpty()) {
+            logger.warn("Validation failed: Last name is missing");
             return "Last name is mandatory and cannot be null or empty.";
         }
         if (counsellor.getPhoneNumber() == null || counsellor.getPhoneNumber().isEmpty()) {
+            logger.warn("Validation failed: Phone number is missing");
             return "Phone number is mandatory and cannot be null or empty.";
         }
         if (counsellor.getEmail() == null || counsellor.getEmail().isEmpty()) {
+            logger.warn("Validation failed: Email is missing");
             return "Email is mandatory and cannot be null or empty.";
         }
         if (counsellor.getPassword() == null || counsellor.getPassword().isEmpty()) {
+            logger.warn("Validation failed: Password is missing");
             return "Password is mandatory and cannot be null or empty.";
         }
         if (counsellor.getRatePerYear() == null || counsellor.getRatePerYear() <= 0) {
+            logger.warn("Validation failed: Invalid rate per year");
             return "Rate per year must be greater than 0.";
         }
+        if (counsellor.getRatePerMinute() == null || counsellor.getRatePerMinute() <= 0) {
+            logger.warn("Validation failed: Invalid rate per minute");
+            return "Rate per minute must be greater than 0.";
+        }
         if (counsellor.getStateOfCounsellor() == null || counsellor.getStateOfCounsellor().toString().isEmpty()) {
+            logger.warn("Validation failed: State is missing");
             return "State of counsellor cannot be null or empty.";
         }
         if (counsellor.getExpertise() == null || counsellor.getExpertise().isEmpty()) {
+            logger.warn("Validation failed: Expertise is missing");
             return "Expertise cannot be null or empty.";
         }
+        if (counsellor.getLanguagesKnow() == null || counsellor.getLanguagesKnow().toString().isEmpty()) {
+            logger.warn("Validation failed: Languages known is missing");
+            return "Language known of counsellor cannot be null or empty.";
+        }
+        if (counsellor.getWorkingDays() == null || counsellor.getWorkingDays().isEmpty()) {
+            logger.warn("Validation failed: Working days are missing");
+            return "Working days cannot be null or empty.";
+        }
+        if (counsellor.getOfficeStartTime() == null || counsellor.getOfficeStartTime().isEmpty()) {
+            logger.warn("Validation failed: Office start time is missing");
+            return "Office Start time cannot be null or empty.";
+        }
+        if (counsellor.getOfficeEndTime() == null || counsellor.getOfficeEndTime().toString().isEmpty()) {
+            logger.warn("Validation failed: Office end time is missing");
+            return "Office end time known of counsellor cannot be null or empty.";
+        }
+        if (counsellor.getFullOfficeAddress() == null) {
+            logger.warn("Validation failed: Office address is missing");
+            return "Full office address cannot be null or empty.";
+        }
 
-        // Check for uniqueness of userName
+        // Check for uniqueness
         DocumentReference userDocRef = dbFirestore.collection(COUNSELLORS).document(counsellor.getUserName());
         if (userDocRef.get().get().exists()) {
+            logger.warn("Signup failed: Username already exists - {}", counsellor.getUserName());
             return "User already exists with userName: " + counsellor.getUserName();
         }
 
-        // Check for uniqueness of phoneNumber and email
         CollectionReference counsellorsCollection = dbFirestore.collection(COUNSELLORS);
         Query phoneQuery = counsellorsCollection.whereEqualTo("phoneNumber", counsellor.getPhoneNumber());
         Query emailQuery = counsellorsCollection.whereEqualTo("email", counsellor.getEmail());
 
         if (!phoneQuery.get().get().isEmpty()) {
+            logger.warn("Signup failed: Phone number already exists - {}", counsellor.getPhoneNumber());
             return "Phone number already exists: " + counsellor.getPhoneNumber();
         }
+
         if (!emailQuery.get().get().isEmpty()) {
+            logger.warn("Signup failed: Email already exists - {}", counsellor.getEmail());
             return "Email already exists: " + counsellor.getEmail();
         }
 
         // Save new counsellor
         ApiFuture<WriteResult> collectionsApiFuture = userDocRef.set(counsellor);
+        logger.info("Counsellor signup successful for username: {}, time: {}", counsellor.getUserName(), collectionsApiFuture.get().getUpdateTime());
+
         return "Signup successful! User ID: " + counsellor.getUserName();
     }
+	
+	public Map<String, Object> signinAndGenerateTokens(String identifier, String password)
+	        throws ExecutionException, InterruptedException, FirebaseAuthException {
 
+	    logger.info("Initiating signin and token generation for identifier: {}", identifier);
+
+	    HttpStatus status = counsellorSignin(identifier, password);
+	    String userId = getCounsellorId(identifier);
+
+	    if (status != HttpStatus.OK) {
+	        logger.warn("Signin failed for identifier: {}", identifier);
+	        throw new InvalidCredentialsException("Invalid login attempt");
+	    }
+
+	    logger.info("Signin successful for userId: {}. Generating tokens...", userId);
+
+	    String firebaseCustomToken = FirebaseAuth.getInstance().createCustomToken(userId);
+	    logger.debug("Firebase custom token generated for userId: {}", userId);
+
+	    String jwtToken = Jwts.builder()
+	            .setSubject(userId)
+	            .setIssuedAt(new Date())
+	            .setExpiration(new Date(System.currentTimeMillis() + 86400000L * 365)) // 1 year
+	            .signWith(JwtKeyProvider.getSigningKey())
+	            .compact();
+
+	    logger.debug("JWT token generated for userId: {}", userId);
+
+	    return Map.of(
+	            "firebaseCustomToken", firebaseCustomToken,
+	            "jwtToken", jwtToken,
+	            "userId", userId
+	    );
+	}
 
     // Signin functionality
-    public HttpStatus counsellorSignin(String identifier, String password) throws ExecutionException, InterruptedException {
-        Firestore dbFirestore = FirestoreClient.getFirestore();
-        CollectionReference counsellorsCollection = dbFirestore.collection(COUNSELLORS);
+	public HttpStatus counsellorSignin(String identifier, String password) throws ExecutionException, InterruptedException {
+	    logger.info("Attempting counsellor signin for identifier: {}", identifier);
 
-        // Determine the identifier type and query the Firestore
-        Query query;
-        if (identifier.contains("@")) {
-            query = counsellorsCollection.whereEqualTo("email", identifier);
-        } else if (identifier.contains("+91")) {
-            query = counsellorsCollection.whereEqualTo("phoneNumber", identifier);
-        } else {
-            DocumentReference docRef = counsellorsCollection.document(identifier);
+	    Firestore dbFirestore = FirestoreClient.getFirestore();
+	    CollectionReference counsellorsCollection = dbFirestore.collection(COUNSELLORS);
 
-            // Check if the document exists
-            DocumentSnapshot documentSnapshot = docRef.get().get();
-            if (documentSnapshot.exists()) {
-                Counsellor existingCounsellor = documentSnapshot.toObject(Counsellor.class);
+	    Query query;
 
-                // Validate the password
-                if (existingCounsellor.getPassword().equals(password)) {
-                    return HttpStatus.OK;
-                } else {
-                    throw new InvalidCredentialsException("Invalid credentials provided.");
-                }
-            } else {
-                throw new UserNotFoundException("Counsellor not found for userName: " + identifier);
-            }
-        }
+	    if (identifier.contains("@")) {
+	        logger.debug("Identifier treated as email: {}", identifier);
+	        query = counsellorsCollection.whereEqualTo("email", identifier);
+	    } else if (identifier.contains("+91")) {
+	        logger.debug("Identifier treated as phone number: {}", identifier);
+	        query = counsellorsCollection.whereEqualTo("phoneNumber", identifier);
+	    } else {
+	        logger.debug("Identifier treated as userName: {}", identifier);
+	        DocumentReference docRef = counsellorsCollection.document(identifier);
+	        DocumentSnapshot documentSnapshot = docRef.get().get();
 
-        // Execute the query for email or phoneNumber
-        List<QueryDocumentSnapshot> documents = query.get().get().getDocuments();
+	        if (documentSnapshot.exists()) {
+	            Counsellor existingCounsellor = documentSnapshot.toObject(Counsellor.class);
+	            if (existingCounsellor.getPassword().equals(password)) {
+	                logger.info("Signin successful for userName: {}", identifier);
+	                return HttpStatus.OK;
+	            } else {
+	                logger.warn("Invalid password for userName: {}", identifier);
+	                throw new InvalidCredentialsException("Invalid credentials provided.");
+	            }
+	        } else {
+	            logger.warn("No counsellor found for userName: {}", identifier);
+	            throw new UserNotFoundException("Counsellor not found for userName: " + identifier);
+	        }
+	    }
 
-        if (!documents.isEmpty()) {
-            QueryDocumentSnapshot document = documents.get(0);
-            Counsellor existingCounsellor = document.toObject(Counsellor.class);
+	    List<QueryDocumentSnapshot> documents = query.get().get().getDocuments();
 
-            if (existingCounsellor.getPassword().equals(password)) {
-                return HttpStatus.OK;
-            } else {
-                throw new InvalidCredentialsException("Invalid credentials provided.");
-            }
-        } else {
-            throw new UserNotFoundException("Counsellor not found for the provided credentials.");
-        }
-    }
-
-
+	    if (!documents.isEmpty()) {
+	        Counsellor existingCounsellor = documents.get(0).toObject(Counsellor.class);
+	        if (existingCounsellor.getPassword().equals(password)) {
+	            logger.info("Signin successful for identifier: {}", identifier);
+	            return HttpStatus.OK;
+	        } else {
+	            logger.warn("Invalid password for identifier: {}", identifier);
+	            throw new InvalidCredentialsException("Invalid credentials provided.");
+	        }
+	    } else {
+	        logger.warn("No counsellor found for identifier: {}", identifier);
+	        throw new UserNotFoundException("Counsellor not found for the provided credentials.");
+	    }
+	}
     
     public List<Counsellor> getAllCounsellors() {
         Firestore firestore = FirestoreClient.getFirestore();
@@ -468,6 +535,22 @@ public class CounsellorService {
 	        DocumentSnapshot snapshot = firestore.collection("counsellors").document(counsellorId).get().get();
 	        return snapshot.exists() ? snapshot.toObject(Counsellor.class) : null;
 	    }
+	 
+	 public Counsellor getCounsellorFromPhoneNumber(String phoneNumber) throws ExecutionException, InterruptedException {
+	        Firestore dbFirestore = FirestoreClient.getFirestore();
+	        CollectionReference counsellorsCollection = dbFirestore.collection(COUNSELLORS);
+
+	        // Query to find user by phone number
+	        Query query = counsellorsCollection.whereEqualTo("phoneNumber", phoneNumber);
+	        List<QueryDocumentSnapshot> documents = query.get().get().getDocuments();
+
+	        if (!documents.isEmpty()) {
+	        	Counsellor counsellor = documents.get(0).toObject(Counsellor.class);
+	            return counsellor;
+	        } else {
+	            throw new UserNotFoundException("No counsellor found with phone number: " + phoneNumber);
+	        }
+	    }
 
 
 	 public void markFollowersNotificationAsSeen(String counsellorId, String userId) {
@@ -483,4 +566,53 @@ public class CounsellorService {
 		 updates.put(userId, true);
 		 dbRef.child(counsellorId).updateChildrenAsync(updates);
 	  }
+	 public String applyPendingUpdates(String userName) throws ExecutionException, InterruptedException {
+	        Firestore db = FirestoreClient.getFirestore();
+
+	        // Step 1: Get the update map from 'updates/{userName}'
+	        DocumentSnapshot updatesSnapshot = db.collection("updates").document(userName).get().get();
+	        if (!updatesSnapshot.exists()) {
+	            throw new RuntimeException("No update document found for user: " + userName);
+	        }
+
+	        Map<String, Object> updates = updatesSnapshot.getData();
+	        if (updates == null || updates.isEmpty()) {
+	            throw new RuntimeException("Update data is empty for user: " + userName);
+	        }
+
+	        // Step 2: Remove metadata fields if needed
+	        updates.remove("lastUpdatedAt");  // Optional: remove Firestore internal fields
+
+	        // Step 3: Apply updates to counsellors/{userName}
+	        DocumentReference counsellorDoc = db.collection("counsellors").document(userName);
+	        ApiFuture<WriteResult> future = counsellorDoc.set(updates, SetOptions.merge());
+	        WriteResult result = future.get();
+	        
+	        ApiFuture<WriteResult> deleteFuture = db.collection("updates").document(userName).delete();
+	        deleteFuture.get(); // Wait for delete to complete
+
+
+	        return "Counsellor document updated successfully at " + result.getUpdateTime();
+	    }
+
+	    
+	    public String saveCounsellorUpdates(String userName, Map<String, Object> updates)
+	            throws ExecutionException, InterruptedException {
+
+	        if (updates == null || updates.isEmpty()) {
+	            throw new IllegalArgumentException("Update map cannot be null or empty.");
+	        }
+
+	        Firestore dbFirestore = FirestoreClient.getFirestore();
+	        DocumentReference updateDocRef = dbFirestore.collection("updates").document(userName);
+
+	        // Add a timestamp
+	        updates.put("lastUpdatedAt", FieldValue.serverTimestamp());
+
+	        // Merge the updates into the document
+	        ApiFuture<WriteResult> future = updateDocRef.set(updates, SetOptions.merge());
+	        WriteResult result = future.get();
+
+	        return "Updates saved successfully at " + result.getUpdateTime();
+	    }
 }

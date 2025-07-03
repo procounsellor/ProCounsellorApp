@@ -12,8 +12,6 @@ public class Counsellor {
 	@DocumentId
     private String userName;
 	
-	private String addressId;
-	
     private String firstName;   
     private String lastName;   
     private String phoneNumber; 
@@ -29,9 +27,10 @@ public class Counsellor {
     private String role;
     private List<ActivityLog> activityLog;
     private List<CallHistory> callHistory;
-    private String stateOfCounsellor;
+    private List<String> stateOfCounsellor;
     private List<Map<String,String>> chatIdsCreatedForCounsellor;
     private Double ratePerYear;
+    private Double ratePerMinute;
     private List<String> expertise; //align with user's interested course
     private Integer noOfClients;
     private Integer noOfFollowers;
@@ -48,5 +47,11 @@ public class Counsellor {
     private String fcmToken;
     private String voipToken;
     private String platform;
-    private String currectCallUUID;// handle call cancel
+    private String currectCallUUID; //handle call cancel
+    private List<String> workingDays;
+    private String officeStartTime;
+    private String officeEndTime;
+    private Address fullOfficeAddress;
+    private boolean phoneOtpVerified;
+    private boolean emailOtpVerified;
 }
