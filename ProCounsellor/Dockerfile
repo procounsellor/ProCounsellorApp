@@ -1,26 +1,25 @@
-# Use Eclipse Temurin JDK for Java 17 (or your required version)
+# Build Stage
 FROM eclipse-temurin:17-jdk as build
-
-# Set working directory
 WORKDIR /app
-
-# Copy project files
-COPY . .
-
-# Build the Spring Boot application
+COPY mvnw .
+COPY .mvn .mvn
+COPY pom.xml .
+COPY src src
 RUN ./mvnw clean package -DskipTests
 
-# Use a lightweight JDK for production
-FROM eclipse-temurin:17-jre
-
-# Set working directory
+# Runtime Stage
+FROM eclipse-temurin:17-jre-alpine
 WORKDIR /app
-
-# Copy the JAR file from build stage
 COPY --from=build /app/target/*.jar app.jar
 
-# Expose application port
+RUN addgroup app && adduser -S -G app appuser
+USER appuser
+
+ENV JAVA_OPTS="-Xms512m -Xmx1024m"
+ENV PORT=8080
 EXPOSE 8080
 
-# Run the application
-ENTRYPOINT ["java", "-jar", "app.jar"]
+HEALTHCHECK --interval=30s --timeout=5s --start-period=40s \
+  CMD curl -f http://localhost:8080/actuator/health || exit 1
+
+ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -jar app.jar"]
