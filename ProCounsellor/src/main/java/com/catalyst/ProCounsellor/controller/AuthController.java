@@ -6,6 +6,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import com.catalyst.ProCounsellor.config.JwtKeyProvider;
+import com.catalyst.ProCounsellor.dto.MailOtpRequest;
 import com.catalyst.ProCounsellor.exception.InvalidCredentialsException;
 import com.catalyst.ProCounsellor.exception.UserNotFoundException;
 import com.catalyst.ProCounsellor.model.Admin;
@@ -15,6 +16,7 @@ import com.catalyst.ProCounsellor.model.States;
 import com.catalyst.ProCounsellor.model.User;
 import com.catalyst.ProCounsellor.service.AdminService;
 import com.catalyst.ProCounsellor.service.CounsellorService;
+import com.catalyst.ProCounsellor.service.MailOtpService;
 import com.catalyst.ProCounsellor.service.UserService;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseAuthException;
@@ -31,10 +33,8 @@ import java.util.concurrent.ExecutionException;
 public class AuthController {
     @Autowired
     private UserService userService;
-    
     @Autowired
     private CounsellorService counsellorService;
-    
     @Autowired
     private AdminService adminService;
     
@@ -86,33 +86,49 @@ public class AuthController {
         return ResponseEntity.ok(isNull);
     }
     
-    @PostMapping("/counsellorSignup")
-    public ResponseEntity<Map<String, Object>> counsellorSignup(
-            @RequestParam String firstName,
-            @RequestParam String lastName,
-            @RequestParam String phoneNumber,
-            @RequestParam String email,
-            @RequestParam String password,
-            @RequestParam Double ratePerYear,
-            @RequestParam String stateOfCounsellor,
-            @RequestParam List<String> expertise) throws ExecutionException, InterruptedException {
+    @PostMapping("/verifyCounsellorPhoneNumber")
+    public ResponseEntity<Boolean> verifyCounsellorPhoneNumber(
+            @RequestParam String phoneNumber, @RequestParam String otp) {
+
+        phoneNumber = phoneNumber.replace(" ", "+");
+
+        if (phoneNumber == null || phoneNumber.isEmpty()) {
+            return ResponseEntity.badRequest().body(false);
+        }
 
         try {
-            // Create a new Counsellor object and set the fields
-            Counsellor counsellor = new Counsellor();
-            if (!phoneNumber.startsWith("+")) {
-                phoneNumber = phoneNumber.replace(" ", "+");
+            boolean result = counsellorService.verifyCounsellorPhoneNumber(phoneNumber, otp);
+            if(result) {
+            	return ResponseEntity.ok(true);
             }
-            counsellor.setUserName(phoneNumber.replaceFirst("^\\+\\d{2}", ""));  // Derive userName from phone
-            counsellor.setFirstName(firstName);
-            counsellor.setLastName(lastName);
-            counsellor.setPhoneNumber(phoneNumber);
-            counsellor.setEmail(email);
-            counsellor.setPassword(password);
-            counsellor.setRatePerYear(ratePerYear);
-            counsellor.setStateOfCounsellor(stateOfCounsellor);
-            counsellor.setExpertise(expertise);
+            else {
+            	return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(false);
+            }
+            
+        } catch (RuntimeException | FirebaseAuthException | InterruptedException | ExecutionException e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(false);
+        }
+    }
+    
+    @PostMapping("/send-mail")
+    public ResponseEntity<String> sendOtp(@RequestBody MailOtpRequest request) {
+        counsellorService.generateMailOtp(request.getEmail());
+        return ResponseEntity.ok("OTP sent ✅");
+    }
 
+    @PostMapping("/verify-mail")
+    public ResponseEntity<String> verifyOtp(@RequestBody MailOtpRequest request) {
+        boolean isValid = counsellorService.verifyMailOtp(request.getEmail(), request.getOtp());
+        if (isValid) {
+            return ResponseEntity.ok("OTP verified ✅");
+        } else {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid or expired OTP ❌");
+        }
+    }
+    
+    @PostMapping("/counsellorSignup")
+    public ResponseEntity<Map<String, Object>> counsellorSignup(@RequestBody Counsellor counsellor) throws ExecutionException, InterruptedException {
+        try {
             String message = counsellorService.counsellorSignup(counsellor);
             return buildResponse(message, HttpStatus.CREATED);
         } catch (Exception e) {
@@ -121,29 +137,14 @@ public class AuthController {
     }
 
     @PostMapping("/counsellorSignin")
-    public ResponseEntity<Map<String, Object>> counsellorSignin(@RequestParam String identifier, @RequestParam String password) throws ExecutionException, InterruptedException, FirebaseAuthException {
+    public ResponseEntity<Map<String, Object>> counsellorSignin(
+            @RequestParam String identifier,
+            @RequestParam String password
+    ) throws ExecutionException, InterruptedException, FirebaseAuthException {
         try {
-            HttpStatus status = counsellorService.counsellorSignin(identifier, password);
-            String jwtToken = null;
-            String userId = counsellorService.getCounsellorId(identifier);
-            String firebaseCustomToken = null;
-            
-            if (status == HttpStatus.OK) {
-            	firebaseCustomToken = FirebaseAuth.getInstance().createCustomToken(userId);
-                // Generate JWT Token using the centralized key
-                jwtToken = Jwts.builder()
-                        .setSubject(userId)
-                        .setIssuedAt(new Date())
-                        .setExpiration(new Date(System.currentTimeMillis() + 86400000 * 365))
-                        .signWith(JwtKeyProvider.getSigningKey())
-                        .compact();
-            }
+            Map<String, Object> response = counsellorService.signinAndGenerateTokens(identifier, password);
+            return ResponseEntity.ok(response);
 
-            return ResponseEntity.status(status).body(Map.of(
-                    "firebaseCustomToken", firebaseCustomToken,
-                    "jwtToken", jwtToken,
-                    "userId", userId));
-            
         } catch (UserNotFoundException e) {
             return buildResponse(e.getMessage(), HttpStatus.NOT_FOUND);
         } catch (InvalidCredentialsException e) {

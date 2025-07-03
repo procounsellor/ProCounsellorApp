@@ -20,6 +20,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
+import com.catalyst.ProCounsellor.config.JwtUtil;
 import com.catalyst.ProCounsellor.exception.UserNotFoundException;
 import com.catalyst.ProCounsellor.model.Counsellor;
 import com.catalyst.ProCounsellor.model.Course;
@@ -32,6 +33,8 @@ import com.google.cloud.firestore.DocumentSnapshot;
 import com.google.cloud.firestore.Firestore;
 import com.google.cloud.firestore.QuerySnapshot;
 import com.google.firebase.cloud.FirestoreClient;
+
+import jakarta.servlet.http.HttpServletRequest;
 
 @RestController
 @RequestMapping("/api/user")
@@ -312,17 +315,26 @@ public class UserController {
         }
     }
 	
-	 	@PatchMapping("/{userId}")
-	    public ResponseEntity<User> updateUserFields(
-	            @PathVariable String userId,
-	            @RequestBody Map<String, Object> updates) {
-	        try {
-	            User updatedUser = userService.updateUserFields(userId, updates);
-	            return ResponseEntity.ok(updatedUser);
-	        } catch (Exception e) {
-	            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null);
+	@PatchMapping("/{userId}")
+	public ResponseEntity<?> updateUserFields(
+	        @PathVariable String userId,
+	        @RequestBody Map<String, Object> updates,
+	        HttpServletRequest request) {
+
+	    try {
+	        User user = JwtUtil.getAuthenticatedUser(request);
+
+	        if (!user.getUserName().equals(userId)) {
+	            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Unauthorized access");
 	        }
+
+	        User updatedUser = userService.updateUserFields(userId, updates);
+	        return ResponseEntity.ok(updatedUser);
+
+	    } catch (Exception e) {
+	        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(e.getMessage());
 	    }
+	}
 	 
 	 	 /**
 	     * Update user state API using PathVariable.

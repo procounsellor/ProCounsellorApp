@@ -1,7 +1,6 @@
 package com.catalyst.ProCounsellor.service;
 
 
-import com.catalyst.ProCounsellor.exception.InvalidCredentialsException;
 import com.catalyst.ProCounsellor.exception.UserNotFoundException;
 import com.catalyst.ProCounsellor.model.ActivityLog;
 import com.catalyst.ProCounsellor.model.Counsellor;
@@ -718,6 +717,22 @@ public class UserService {
 	        if (!documents.isEmpty()) {
 	            User user = documents.get(0).toObject(User.class);
 	            return user.getUserName();
+	        } else {
+	            throw new UserNotFoundException("No user found with phone number: " + phoneNumber);
+	        }
+	    }
+	    
+	    public User getUserFromPhoneNumber(String phoneNumber) throws ExecutionException, InterruptedException {
+	        Firestore dbFirestore = FirestoreClient.getFirestore();
+	        CollectionReference usersCollection = dbFirestore.collection(USERS);
+
+	        // Query to find user by phone number
+	        Query query = usersCollection.whereEqualTo("phoneNumber", phoneNumber);
+	        List<QueryDocumentSnapshot> documents = query.get().get().getDocuments();
+
+	        if (!documents.isEmpty()) {
+	            User user = documents.get(0).toObject(User.class);
+	            return user;
 	        } else {
 	            throw new UserNotFoundException("No user found with phone number: " + phoneNumber);
 	        }
