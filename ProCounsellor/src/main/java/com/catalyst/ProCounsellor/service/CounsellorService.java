@@ -139,14 +139,6 @@ public class CounsellorService {
             logger.warn("Validation failed: Password is missing");
             return "Password is mandatory and cannot be null or empty.";
         }
-        if (counsellor.getRatePerYear() == null || counsellor.getRatePerYear() <= 0) {
-            logger.warn("Validation failed: Invalid rate per year");
-            return "Rate per year must be greater than 0.";
-        }
-        if (counsellor.getRatePerMinute() == null || counsellor.getRatePerMinute() <= 0) {
-            logger.warn("Validation failed: Invalid rate per minute");
-            return "Rate per minute must be greater than 0.";
-        }
         if (counsellor.getStateOfCounsellor() == null || counsellor.getStateOfCounsellor().toString().isEmpty()) {
             logger.warn("Validation failed: State is missing");
             return "State of counsellor cannot be null or empty.";
