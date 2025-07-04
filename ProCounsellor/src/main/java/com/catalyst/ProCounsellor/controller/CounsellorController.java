@@ -4,7 +4,6 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -20,9 +19,8 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
-import com.catalyst.ProCounsellor.exception.UserNotFoundException;
+import com.catalyst.ProCounsellor.model.AppointmentBooking;
 import com.catalyst.ProCounsellor.model.Counsellor;
-import com.catalyst.ProCounsellor.model.StateType;
 import com.catalyst.ProCounsellor.model.User;
 import com.catalyst.ProCounsellor.service.CounsellorService;
 import com.catalyst.ProCounsellor.service.PhotoService;
@@ -37,7 +35,30 @@ public class CounsellorController {
 	@Autowired
 	private PhotoService photoService;
 	
+	@GetMapping("/appointments")
+    public ResponseEntity<List<AppointmentBooking>> getAppointmentsByCounsellor(
+            @RequestParam String counsellorId) {
+        try {
+            List<AppointmentBooking> appointments = counsellorService.getAppointmentsByCounsellorId(counsellorId);
+            return ResponseEntity.ok(appointments);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
 	
+	@GetMapping("/appointments/{appointmentId}")
+	public ResponseEntity<AppointmentBooking> getAppointmentById(@PathVariable String appointmentId) {
+	    try {
+	        AppointmentBooking appointment = counsellorService.getAppointmentById(appointmentId);
+	        if (appointment != null) {
+	            return ResponseEntity.ok(appointment);
+	        } else {
+	            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);
+	        }
+	    } catch (Exception e) {
+	        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
+	    }
+	}
 	
 	@GetMapping("/all-counsellors")
     public List<Counsellor> getAllCounsellors() {

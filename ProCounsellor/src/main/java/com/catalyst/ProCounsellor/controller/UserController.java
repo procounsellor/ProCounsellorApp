@@ -21,10 +21,11 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.catalyst.ProCounsellor.config.JwtUtil;
+import com.catalyst.ProCounsellor.dto.AppointmentBookingRequest;
 import com.catalyst.ProCounsellor.exception.UserNotFoundException;
 import com.catalyst.ProCounsellor.model.Counsellor;
-import com.catalyst.ProCounsellor.model.Course;
 import com.catalyst.ProCounsellor.model.User;
+import com.catalyst.ProCounsellor.service.AppointmentBookingService;
 import com.catalyst.ProCounsellor.service.PhotoService;
 import com.catalyst.ProCounsellor.service.UserService;
 import com.google.api.core.ApiFuture;
@@ -45,6 +46,24 @@ public class UserController {
 	
 	@Autowired
 	private PhotoService photoService;
+	
+	@Autowired
+    private AppointmentBookingService appointmentBookingService;
+
+    @PostMapping("/book")
+    public ResponseEntity<?> bookAppointment(@RequestBody AppointmentBookingRequest appointmentBookingRequest, HttpServletRequest request) {
+        try {
+	        User user = JwtUtil.getAuthenticatedUser(request);
+
+	        if (!user.getUserName().equals(appointmentBookingRequest.getUserId())) {
+	            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Unauthorized access");
+	        }
+            String appointmentId = appointmentBookingService.bookAppointment(appointmentBookingRequest);
+            return ResponseEntity.status(HttpStatus.CREATED).body(Map.of("message", "Appointment booked successfully", "appointmentId", appointmentId));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
+    }
 	
 	@GetMapping("/all-users")
     public List<User> getAllUsers() {

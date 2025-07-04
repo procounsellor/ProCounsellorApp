@@ -3,6 +3,7 @@ package com.catalyst.ProCounsellor.service;
 import com.catalyst.ProCounsellor.config.JwtKeyProvider;
 import com.catalyst.ProCounsellor.exception.InvalidCredentialsException;
 import com.catalyst.ProCounsellor.exception.UserNotFoundException;
+import com.catalyst.ProCounsellor.model.AppointmentBooking;
 import com.catalyst.ProCounsellor.model.Counsellor;
 import com.catalyst.ProCounsellor.model.CounsellorState;
 import com.catalyst.ProCounsellor.model.User;
@@ -38,6 +39,9 @@ public class CounsellorService {
 	
 	@Autowired
 	private SharedService sharedService;
+	
+	@Autowired
+	private AppointmentBookingService appointmentBookingService;
 	
 	@Autowired
     private OTPService otpService;
@@ -257,6 +261,14 @@ public class CounsellorService {
 	        logger.warn("No counsellor found for identifier: {}", identifier);
 	        throw new UserNotFoundException("Counsellor not found for the provided credentials.");
 	    }
+	}
+	
+	public List<AppointmentBooking> getAppointmentsByCounsellorId(String counsellorId) throws Exception {
+		return appointmentBookingService.getAppointmentsByCounsellorId(counsellorId);
+	}
+	
+	public AppointmentBooking getAppointmentById(String appointmentId) throws ExecutionException, InterruptedException {
+		return appointmentBookingService.getAppointmentById(appointmentId);
 	}
     
     public List<Counsellor> getAllCounsellors() {

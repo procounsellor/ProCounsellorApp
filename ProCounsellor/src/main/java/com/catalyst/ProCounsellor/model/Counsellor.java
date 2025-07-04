@@ -54,4 +54,5 @@ public class Counsellor {
     private Address fullOfficeAddress;
     private boolean phoneOtpVerified;
     private boolean emailOtpVerified;
+    private List<String> appointmentIds;
 }
