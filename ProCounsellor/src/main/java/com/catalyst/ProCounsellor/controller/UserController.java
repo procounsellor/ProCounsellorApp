@@ -22,10 +22,13 @@ import org.springframework.web.multipart.MultipartFile;
 
 import com.catalyst.ProCounsellor.config.JwtUtil;
 import com.catalyst.ProCounsellor.dto.AppointmentBookingRequest;
+import com.catalyst.ProCounsellor.dto.CounsellorDataInUserDashboard;
 import com.catalyst.ProCounsellor.exception.UserNotFoundException;
+import com.catalyst.ProCounsellor.model.AppointmentBooking;
 import com.catalyst.ProCounsellor.model.Counsellor;
 import com.catalyst.ProCounsellor.model.User;
 import com.catalyst.ProCounsellor.service.AppointmentBookingService;
+import com.catalyst.ProCounsellor.service.CounsellorService;
 import com.catalyst.ProCounsellor.service.PhotoService;
 import com.catalyst.ProCounsellor.service.UserService;
 import com.google.api.core.ApiFuture;
@@ -45,10 +48,72 @@ public class UserController {
     private UserService userService;
 	
 	@Autowired
+    private CounsellorService counsellorService;
+	
+	@Autowired
 	private PhotoService photoService;
 	
 	@Autowired
     private AppointmentBookingService appointmentBookingService;
+	
+	@PatchMapping("/{userId}")
+	public ResponseEntity<?> updateUserFields(
+	        @PathVariable String userId,
+	        @RequestBody Map<String, Object> updates,
+	        HttpServletRequest request) {
+
+	    try {
+	        User user = JwtUtil.getAuthenticatedUser(request);
+
+	        if (!user.getUserName().equals(userId)) {
+	            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Unauthorized access");
+	        }
+
+	        User updatedUser = userService.updateUserFields(userId, updates);
+	        return ResponseEntity.ok(updatedUser);
+
+	    } catch (Exception e) {
+	        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(e.getMessage());
+	    }
+	}
+	
+	@GetMapping("/{userId}")
+	public ResponseEntity<?> getUserById(@PathVariable String userId, HttpServletRequest request) 
+	        throws ExecutionException, InterruptedException {
+
+		User authenticatedUser = JwtUtil.getAuthenticatedUser(request);
+
+        if (!authenticatedUser.getUserName().equals(userId)) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Unauthorized access");
+        }
+
+	    User user = userService.getUserById(userId);
+
+	    if (user == null) {
+	        return ResponseEntity.status(HttpStatus.NOT_FOUND).body("User not found");
+	    }
+
+	    return ResponseEntity.ok(user);
+	}
+	
+	@GetMapping("/getCounsellorById")
+	public ResponseEntity<?> getCounsellorById(@RequestParam String userId, @RequestParam String counsellorId, HttpServletRequest request) 
+	        throws ExecutionException, InterruptedException {
+
+		User user = JwtUtil.getAuthenticatedUser(request);
+		
+	    if (!user.getUserName().equals(userId)) {
+	        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Access denied: user ID mismatch");
+	    }
+
+	    Counsellor counsellor = counsellorService.getCounsellorById(counsellorId);
+
+	    if (counsellor == null) {
+	        return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Counsellor not found");
+	    }
+
+	    return ResponseEntity.ok(counsellor);
+	}
 
     @PostMapping("/book")
     public ResponseEntity<?> bookAppointment(@RequestBody AppointmentBookingRequest appointmentBookingRequest, HttpServletRequest request) {
@@ -64,17 +129,70 @@ public class UserController {
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         }
     }
+    
+	@GetMapping("/selectedCounsellorAppointments")
+    public ResponseEntity<List<AppointmentBooking>> getAppointmentsByCounsellor(
+    		@RequestParam String userId, @RequestParam String counsellorId, HttpServletRequest request) {
+        try {
+        	User user = JwtUtil.getAuthenticatedUser(request);
+
+	        if (!user.getUserName().equals(userId)) {
+	        	return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+	        }
+	        
+            List<AppointmentBooking> appointments = counsellorService.getAppointmentsByCounsellorId(counsellorId);
+            return ResponseEntity.ok(appointments);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+	}
+	
+	@GetMapping("/getAppointmentById")
+	public ResponseEntity<AppointmentBooking> getAppointmentById(@RequestParam String userId, @RequestParam String appointmentId, HttpServletRequest request) {
+	    try {
+	    	User user = JwtUtil.getAuthenticatedUser(request);
+
+	        if (!user.getUserName().equals(userId)) {
+	        	return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+	        }
+	        
+	        AppointmentBooking appointment = counsellorService.getAppointmentById(appointmentId);
+	        if (appointment != null) {
+	            return ResponseEntity.ok(appointment);
+	        } else {
+	            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);
+	        }
+	    } catch (Exception e) {
+	        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
+	    }
+	}
+    
+    @GetMapping("/{userName}/counsellorsAccordingToInterestedCourse/all")
+    public ResponseEntity<List<CounsellorDataInUserDashboard>> getCounsellorsByUserInterest(@PathVariable String userName, HttpServletRequest request) {
+        try {
+        	User user = JwtUtil.getAuthenticatedUser(request);
+
+	        if (!user.getUserName().equals(userName)) {
+	            return new ResponseEntity<>(HttpStatus.UNAUTHORIZED);
+	        }
+	        
+            User loggedInUser = userService.getUserById(userName);
+            String interestedCourse = loggedInUser.getInterestedCourse();
+            List<CounsellorDataInUserDashboard> matchingCounsellors = userService.getCounsellorsByCourse(interestedCourse);
+            
+            return new ResponseEntity<>(matchingCounsellors, HttpStatus.OK);
+        } catch (NotFoundException e) {
+            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+        } catch (ExecutionException | InterruptedException e) {
+            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
 	
 	@GetMapping("/all-users")
     public List<User> getAllUsers() {
         return userService.getAllUsers();
     }
 	
-	@GetMapping("/{userId}")
-	public User getUserById(@PathVariable String userId) throws ExecutionException, InterruptedException {	
-		return userService.getUserById(userId);
-	}
-
 	@PostMapping("/{userId}/subscribe/{counsellorId}")
 	public ResponseEntity<String> subscribeToCounsellor(@PathVariable String userId, @PathVariable String counsellorId) {
 	    try {
@@ -334,27 +452,6 @@ public class UserController {
         }
     }
 	
-	@PatchMapping("/{userId}")
-	public ResponseEntity<?> updateUserFields(
-	        @PathVariable String userId,
-	        @RequestBody Map<String, Object> updates,
-	        HttpServletRequest request) {
-
-	    try {
-	        User user = JwtUtil.getAuthenticatedUser(request);
-
-	        if (!user.getUserName().equals(userId)) {
-	            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Unauthorized access");
-	        }
-
-	        User updatedUser = userService.updateUserFields(userId, updates);
-	        return ResponseEntity.ok(updatedUser);
-
-	    } catch (Exception e) {
-	        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(e.getMessage());
-	    }
-	}
-	 
 	 	 /**
 	     * Update user state API using PathVariable.
 	     *
@@ -391,27 +488,6 @@ public class UserController {
 	            return false;
 	        }
 	    }
-	    
-	    /**
-	     * To fetch the list of counsellors according to user's interested course (All over India - no location filter)
-	     * @param userName
-	     * @return
-	     */
-	    @GetMapping("/{userName}/counsellorsAccordingToInterestedCourse/all")
-	    public ResponseEntity<List<Counsellor>> getCounsellorsByUserInterest(@PathVariable String userName) {
-	        try {
-	            User user = userService.getUserById(userName);
-	            String interestedCourse = user.getInterestedCourse();
-	            List<Counsellor> matchingCounsellors = userService.getCounsellorsByCourse(interestedCourse);
-	            
-	            return new ResponseEntity<>(matchingCounsellors, HttpStatus.OK);
-	        } catch (NotFoundException e) {
-	            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
-	        } catch (ExecutionException | InterruptedException e) {
-	            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
-	        }
-	    }
-	    
 	    
 //	    
 //	    /**

@@ -25,6 +25,7 @@ public class User {
     private List<ActivityLog> activityLog;
     private List<CallHistory> callHistory;
     private String photo;
+    private String photoSmall;
     private List<String> userInterestedStateOfCounsellors;
     //mandatory field
     private String interestedCourse; //right now, allowing only one degree interest per user. //Aligning with counsellor's expertise

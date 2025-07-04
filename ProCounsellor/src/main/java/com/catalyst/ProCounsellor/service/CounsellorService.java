@@ -55,7 +55,34 @@ public class CounsellorService {
     
     private static final Logger logger = LoggerFactory.getLogger(CounsellorService.class);
     
-   
+    public Counsellor updateCounsellorFields(String counsellorId, Map<String, Object> updates) throws ExecutionException, InterruptedException {
+        logger.info("Attempting to update counsellor with ID: {}", counsellorId);
+        logger.debug("Update fields: {}", updates);
+
+        DocumentReference docRef = firestore.collection(COUNSELLORS).document(counsellorId);
+
+        try {
+            ApiFuture<WriteResult> writeResultFuture = docRef.update(updates);
+            WriteResult writeResult = writeResultFuture.get();
+
+            logger.info("Successfully updated counsellor ID: {} at {}", counsellorId, writeResult.getUpdateTime());
+
+            DocumentSnapshot document = docRef.get().get();
+            if (document.exists()) {
+                Counsellor updatedCounsellor = document.toObject(Counsellor.class);
+                logger.debug("Updated counsellor data: {}", updatedCounsellor);
+                return updatedCounsellor;
+            } else {
+                logger.warn("Counsellor with ID {} not found after update", counsellorId);
+                throw new RuntimeException("Counsellor not found");
+            }
+
+        } catch (ExecutionException | InterruptedException e) {
+            logger.error("Error updating counsellor with ID {}: {}", counsellorId, e.getMessage(), e);
+            throw e;
+        }
+    }
+    
     public boolean verifyCounsellorPhoneNumber(String phoneNumber, String otp)
             throws FirebaseAuthException, ExecutionException, InterruptedException {
 
@@ -111,14 +138,6 @@ public class CounsellorService {
         if (counsellor.getPassword() == null || counsellor.getPassword().isEmpty()) {
             logger.warn("Validation failed: Password is missing");
             return "Password is mandatory and cannot be null or empty.";
-        }
-        if (counsellor.getRatePerYear() == null || counsellor.getRatePerYear() <= 0) {
-            logger.warn("Validation failed: Invalid rate per year");
-            return "Rate per year must be greater than 0.";
-        }
-        if (counsellor.getRatePerMinute() == null || counsellor.getRatePerMinute() <= 0) {
-            logger.warn("Validation failed: Invalid rate per minute");
-            return "Rate per minute must be greater than 0.";
         }
         if (counsellor.getStateOfCounsellor() == null || counsellor.getStateOfCounsellor().toString().isEmpty()) {
             logger.warn("Validation failed: State is missing");
@@ -262,6 +281,28 @@ public class CounsellorService {
 	        throw new UserNotFoundException("Counsellor not found for the provided credentials.");
 	    }
 	}
+	
+	public Counsellor getCounsellorById(String counsellorId) throws ExecutionException, InterruptedException {
+        logger.info("Fetching counsellor with ID: {}", counsellorId);
+
+        DocumentSnapshot snapshot = null;
+        try {
+            snapshot = firestore.collection("counsellors").document(counsellorId).get().get();
+        } catch (InterruptedException | ExecutionException e) {
+            logger.error("Error retrieving counsellor with ID {}: {}", counsellorId, e.getMessage(), e);
+            throw e;
+        }
+
+        if (snapshot.exists()) {
+            logger.info("Counsellor found with ID: {}", counsellorId);
+            Counsellor counsellor = snapshot.toObject(Counsellor.class);
+            logger.debug("Mapped document to Counsellor object: {}", counsellor);
+            return counsellor;
+        } else {
+            logger.warn("Counsellor not found for ID: {}", counsellorId);
+            return null;
+        }
+    }
 	
 	public List<AppointmentBooking> getAppointmentsByCounsellorId(String counsellorId) throws Exception {
 		return appointmentBookingService.getAppointmentsByCounsellorId(counsellorId);
@@ -418,22 +459,6 @@ public class CounsellorService {
 		    return false; // Return false if counsellor or user not found
 	}
 	
-	public Counsellor updateCounsellorFields(String counsellorId, Map<String, Object> updates) throws ExecutionException, InterruptedException {
-        DocumentReference docRef = firestore.collection(COUNSELLORS).document(counsellorId);
-
-        // Perform the update
-        ApiFuture<WriteResult> writeResult = docRef.update(updates);
-
-        // Fetch the updated Counsellor
-        DocumentSnapshot document = docRef.get().get();
-        if (document.exists()) {
-            return document.toObject(Counsellor.class);
-        } else {
-            throw new RuntimeException("Counsellor not found");
-        }
-    }
-	
-	
 	/**
 	 * Update the user state in Firebase Realtime Database.
 	 *
@@ -542,11 +567,6 @@ public class CounsellorService {
 
 		    throw new UserNotFoundException("No counsellor found for identifier: " + identifier);
 		}
-	 
-	 public Counsellor getCounsellorById(String counsellorId) throws ExecutionException, InterruptedException {
-	        DocumentSnapshot snapshot = firestore.collection("counsellors").document(counsellorId).get().get();
-	        return snapshot.exists() ? snapshot.toObject(Counsellor.class) : null;
-	    }
 	 
 	 public Counsellor getCounsellorFromPhoneNumber(String phoneNumber) throws ExecutionException, InterruptedException {
 	        Firestore dbFirestore = FirestoreClient.getFirestore();
