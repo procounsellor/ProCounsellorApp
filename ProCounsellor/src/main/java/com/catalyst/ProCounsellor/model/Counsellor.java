@@ -21,6 +21,7 @@ public class Counsellor {
     private List<Transaction> transactions;
     private BankDetails bankDetails;
     private String photoUrl;
+    private String photoUrlSmall;
     private String password;
     private String organisationName;
     private String experience;

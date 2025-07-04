@@ -32,6 +32,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
 import com.catalyst.ProCounsellor.config.JwtKeyProvider;
+import com.catalyst.ProCounsellor.dto.CounsellorDataInUserDashboard;
 import com.catalyst.ProCounsellor.service.UserService;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseAuthException;
@@ -214,8 +215,71 @@ public class UserService {
 	        throw e;
 	    }
 	}
-    
-    public boolean addFriend(String userId1, String userId2) {
+	
+	public List<CounsellorDataInUserDashboard> getCounsellorsByCourse(String course) {
+        logger.info("Starting getCounsellorsByCourse for course: {}", course);
+
+        List<CounsellorDataInUserDashboard> result = new ArrayList<>();
+        try {
+            ApiFuture<QuerySnapshot> future = firestore
+                    .collection("counsellors")
+                    .whereArrayContains("expertise", course)
+                    .get();
+
+            List<QueryDocumentSnapshot> documents = future.get().getDocuments();
+            logger.info("Fetched {} counsellor documents for course '{}'", documents.size(), course);
+
+            List<Counsellor> listOfCounsellors = documents.stream()
+                    .map(doc -> {
+                        try {
+                            Counsellor counsellor = doc.toObject(Counsellor.class);
+                            logger.debug("Mapped document ID {} to counsellor: {}", doc.getId(), counsellor);
+                            return counsellor;
+                        } catch (Exception e) {
+                            logger.error("Error mapping document ID {} to Counsellor class: {}", doc.getId(), e.getMessage());
+                            return null;
+                        }
+                    })
+                    .filter(c -> c != null)
+                    .collect(Collectors.toList());
+
+            result = mapRequiredCounsellorData(listOfCounsellors);
+
+        } catch (InterruptedException | ExecutionException e) {
+            logger.error("Error fetching counsellors by course '{}': {}", course, e.getMessage(), e);
+            Thread.currentThread().interrupt();
+        }
+
+        logger.info("Returning {} mapped counsellors for course '{}'", result.size(), course);
+        return result;
+    }
+
+    private List<CounsellorDataInUserDashboard> mapRequiredCounsellorData(List<Counsellor> listOfCounsellors) {
+        logger.debug("Mapping {} counsellors to dashboard DTOs", listOfCounsellors.size());
+
+        List<CounsellorDataInUserDashboard> dashboardList = new ArrayList<>();
+
+        for (Counsellor counsellor : listOfCounsellors) {
+            try {
+                CounsellorDataInUserDashboard dto = new CounsellorDataInUserDashboard();
+                dto.setFirstName(counsellor.getFirstName());
+                dto.setLastName(counsellor.getLastName());
+                dto.setCounsellorName(counsellor.getFirstName() + " " + counsellor.getLastName());
+                dto.setPhotoUrlSmall(counsellor.getPhotoUrlSmall());
+                dto.setRating(counsellor.getRating());
+                dto.setChargesPerYear(String.valueOf(counsellor.getRatePerYear()));
+
+                logger.debug("Mapped Counsellor to DTO: {}", dto);
+                dashboardList.add(dto);
+            } catch (Exception e) {
+                logger.warn("Skipping counsellor due to mapping error: {}", e.getMessage());
+            }
+        }
+
+        return dashboardList;
+    }
+
+	public boolean addFriend(String userId1, String userId2) {
         try {
             User user1 = getUserById(userId1);
             User user2 = getUserById(userId2);
@@ -657,18 +721,6 @@ public class UserService {
 		    // Return the result after the callback completes
 		    return isOnline[0];
 		}
-	 
-	 public List<Counsellor> getCounsellorsByCourse(String course) throws ExecutionException, InterruptedException {
-	        ApiFuture<QuerySnapshot> future = firestore
-	                .collection("counsellors")
-	                .whereArrayContains("expertise", course) 
-	                .get();
-
-	        List<QueryDocumentSnapshot> documents = future.get().getDocuments();
-	        return documents.stream()
-	                        .map(doc -> doc.toObject(Counsellor.class))
-	                        .collect(Collectors.toList());
-	    }
 	 
 	 	/**
 	     * Fetch counsellors whose 'expertise' (list of Courses) contains the user’s interestedCourse
