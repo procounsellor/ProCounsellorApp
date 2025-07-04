@@ -40,6 +40,7 @@ public class User {
     private String voipToken;
     private String platform;
     private String currectCallUUID;// handle call cancel
+    private List<String> appointmentIds;
 }
 
        
