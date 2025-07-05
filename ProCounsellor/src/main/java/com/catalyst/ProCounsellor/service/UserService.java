@@ -321,8 +321,6 @@ public class UserService {
             return false;
         }
     }
-
-
     
     public boolean subscribeToCounsellor(String userId, String counsellorId) {
         try {
@@ -373,8 +371,6 @@ public class UserService {
             return false;
         }
     }
-    
-    
 
 	private void updateRealtimeSubscribers(String counsellorId, String userId) {
         DatabaseReference dbRef = FirebaseDatabase.getInstance().getReference("realtimeSubscribers");
